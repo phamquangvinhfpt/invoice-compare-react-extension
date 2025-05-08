@@ -1,0 +1,29 @@
+/* CSS cho phiên bản đầy đủ trong tab */
+@import './global.css';
+
+/* CSS bổ sung cho phiên bản đầy đủ */
+body {
+  min-height: 100vh;
+}
+
+.full-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Điều chỉnh kích thước cho màn hình lớn */
+@media (min-width: 1024px) {
+  .file-drop-area {
+    min-height: 180px;
+    max-height: 180px;
+  }
+  
+  .max-h-80 {
+    max-height: 500px;
+  }
+  
+  .max-h-96 {
+    max-height: 600px;
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "So Sánh Hóa Đơn Excel",
+  "version": "1.0.0",
+  "description": "So sánh số hóa đơn và thông tin người bán giữa hai file Excel",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/excel.webp",
+      "48": "images/excel.webp",
+      "128": "images/excel.webp"
+    },
+    "default_title": "So Sánh Hóa Đơn Excel"
+  },
+  "permissions": [
+    "storage",
+    "contextMenus"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "images/excel.webp",
+    "48": "images/excel.webp",
+    "128": "images/excel.webp"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+F"
+      },
+      "description": "Mở So Sánh Hóa Đơn Excel"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["*.css", "*.js", "*.png", "*.webp"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "options_ui": {
+    "page": "index.html",
+    "open_in_tab": true
+  }
+}
