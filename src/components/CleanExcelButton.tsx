@@ -11,6 +11,8 @@ interface CleanExcelButtonProps {
   missingInFile2: number[];
   mismatchedRowsFile1: number[];
   mismatchedRowsFile2: number[];
+  duplicatedRowsFile1?: number[];
+  duplicatedRowsFile2?: number[];
   isDisabled: boolean;
 }
 
@@ -23,6 +25,8 @@ const CleanExcelButton: React.FC<CleanExcelButtonProps> = ({
   missingInFile2,
   mismatchedRowsFile1,
   mismatchedRowsFile2,
+  duplicatedRowsFile1 = [],
+  duplicatedRowsFile2 = [],
   isDisabled
 }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -45,7 +49,9 @@ const CleanExcelButton: React.FC<CleanExcelButtonProps> = ({
         missingInFile1,
         missingInFile2,
         mismatchedRowsFile1,
-        mismatchedRowsFile2
+        mismatchedRowsFile2,
+        duplicatedRowsFile1,
+        duplicatedRowsFile2
       );
       
       alert('Đã tạo file Excel với phương pháp mới thành công!');

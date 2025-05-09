@@ -267,6 +267,7 @@ export const compareInvoiceData = (
       
       const seller1Standardized = standardizeSeller(file1Invoices[key].seller);
       const seller2Standardized = standardizeSeller(file2Invoices[key].seller);
+      console.log(`So sánh hóa đơn ${file1Invoices[key].invoiceOriginal}: ${seller1Standardized} vs ${seller2Standardized} ở key ${key}`);
       
       // So sánh tên đã chuẩn hóa
       return seller1Standardized !== seller2Standardized;

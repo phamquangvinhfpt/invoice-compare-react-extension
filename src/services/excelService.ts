@@ -129,6 +129,17 @@ export const addLegend = (worksheet: Worksheet): void => {
       fgColor: { argb: MISMATCHED_SELLER_COLOR }
     };
     yellowRow.commit();
+    
+    // Thêm chú thích màu tím
+    const purpleRow = worksheet.getRow(lastRowNum + 3);
+    const purpleCell = purpleRow.getCell(1);
+    purpleCell.value = 'Màu tím: Hóa đơn trùng lặp';
+    purpleCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: DUPLICATED_INVOICE_COLOR }
+    };
+    purpleRow.commit();
   } catch (error) {
     console.error("Lỗi khi thêm chú thích:", error);
   }
@@ -139,12 +150,14 @@ export const addLegend = (worksheet: Worksheet): void => {
  * @param workbook - Workbook cần highlight
  * @param missingRows - Mảng các chỉ số hàng thiếu
  * @param mismatchRows - Mảng các chỉ số hàng không khớp người bán
+ * @param duplicatedRows - Mảng các chỉ số hàng trùng lặp
  * @param worksheetIndex - Chỉ số của worksheet (0-based)
  */
 export const highlightProblemRows = (
   workbook: Workbook, 
   missingRows: number[], 
   mismatchRows: number[], 
+  duplicatedRows: number[] = [],
   worksheetIndex: number = 0
 ): void => {
   const worksheet = workbook.worksheets[worksheetIndex];
@@ -171,6 +184,9 @@ export const highlightProblemRows = (
     
   const uniqueMismatchRows = Array.isArray(mismatchRows) ? 
     [...new Set(mismatchRows.filter(rowIdx => rowIdx !== undefined && rowIdx !== null))] : [];
+
+  const uniqueDuplicatedRows = Array.isArray(duplicatedRows) ?
+    [...new Set(duplicatedRows.filter(rowIdx => rowIdx !== undefined && rowIdx !== null))] : [];
   
   console.log('=== HIGHLIGHT DEBUG INFO ===');
   console.log('Worksheet:', worksheet.name);
@@ -178,6 +194,8 @@ export const highlightProblemRows = (
   console.log('Missing rows indices:', JSON.stringify(uniqueMissingRows));
   console.log('Mismatch rows count:', uniqueMismatchRows.length);
   console.log('Mismatch rows indices:', JSON.stringify(uniqueMismatchRows));
+  console.log('Duplicated rows count:', uniqueDuplicatedRows.length);
+  console.log('Duplicated rows indices:', JSON.stringify(uniqueDuplicatedRows));
   
   // Highlight các hàng thiếu
   if (uniqueMissingRows.length > 0) {
@@ -201,6 +219,17 @@ export const highlightProblemRows = (
     });
   }
 
+  // Highlight các hàng trùng lặp
+  if (uniqueDuplicatedRows.length > 0) {
+    console.log(`Highlight ${uniqueDuplicatedRows.length} hàng trùng lặp`);
+    uniqueDuplicatedRows.forEach(rowIdx => {
+      // Convert from 0-based to 1-based indexing
+      const excelRowIndex = rowIdx + 1;
+      console.log(`Highlighting duplicated row at index: ${rowIdx} (Excel row: ${excelRowIndex})`);
+      safeHighlightRow(worksheet, excelRowIndex, DUPLICATED_INVOICE_COLOR);
+    });
+  }
+
   // Debug: Kiểm tra sau khi highlight
   console.log("===== TRẠNG THÁI SAU KHI HIGHLIGHT =====");
   const finalColoredRows = new Set<number>();
@@ -210,7 +239,8 @@ export const highlightProblemRows = (
       if (cell.fill && cell.fill.type === 'pattern' && 
           cell.fill.pattern === 'solid' && 
           (cell.fill.fgColor?.argb === MISSING_INVOICE_COLOR || 
-           cell.fill.fgColor?.argb === MISMATCHED_SELLER_COLOR)) {
+           cell.fill.fgColor?.argb === MISMATCHED_SELLER_COLOR ||
+           cell.fill.fgColor?.argb === DUPLICATED_INVOICE_COLOR)) {
         hasColor = true;
       }
     });
@@ -221,7 +251,8 @@ export const highlightProblemRows = (
   // Kiểm tra hàng không nằm trong danh sách nhưng bị highlight
   const expectedHighlightRows = new Set([
     ...uniqueMissingRows.map(idx => idx + 1),
-    ...uniqueMismatchRows.map(idx => idx + 1)
+    ...uniqueMismatchRows.map(idx => idx + 1),
+    ...uniqueDuplicatedRows.map(idx => idx + 1)
   ]);
   
   const unexpectedHighlightRows = [...finalColoredRows].filter(rowNum => 
@@ -266,7 +297,9 @@ export const createAndDownloadZip = async (
   missingInFile1: number[],
   missingInFile2: number[],
   mismatchedRowsFile1: number[],
-  mismatchedRowsFile2: number[]
+  mismatchedRowsFile2: number[],
+  duplicatedRowsFile1: number[] = [],
+  duplicatedRowsFile2: number[] = []
 ): Promise<void> => {
   const zip = new JSZip();
   
@@ -278,6 +311,8 @@ export const createAndDownloadZip = async (
   console.log('Missing in File 2 (rows to highlight in File 1):', missingInFile2);
   console.log('Mismatched in File 1:', mismatchedRowsFile1);
   console.log('Mismatched in File 2:', mismatchedRowsFile2);
+  console.log('Duplicated in File 1:', duplicatedRowsFile1);
+  console.log('Duplicated in File 2:', duplicatedRowsFile2);
   console.log('======================');
   
   // Clone workbook 1 và highlight
@@ -288,7 +323,7 @@ export const createAndDownloadZip = async (
   await clonedWorkbook1.xlsx.load(file1Buffer);
   
   console.log('Highlighting File 1...');
-  highlightProblemRows(clonedWorkbook1, missingInFile2, mismatchedRowsFile1, 0);
+  highlightProblemRows(clonedWorkbook1, missingInFile2, mismatchedRowsFile1, duplicatedRowsFile1, 0);
   
   // Clone workbook 2 và highlight
   // File 2 chỉ highlight những hóa đơn "có trong File 2 nhưng không có trong File 1" (missingInFile1)
@@ -298,7 +333,7 @@ export const createAndDownloadZip = async (
   await clonedWorkbook2.xlsx.load(file2Buffer);
   
   console.log('Highlighting File 2...');
-  highlightProblemRows(clonedWorkbook2, missingInFile1, mismatchedRowsFile2, 0);
+  highlightProblemRows(clonedWorkbook2, missingInFile1, mismatchedRowsFile2, duplicatedRowsFile2, 0);
   
   // Tạo tên file
   const file1Parts = file1Name.split('.');
@@ -322,10 +357,12 @@ export const createAndDownloadZip = async (
 1. File: ${file1NameHighlighted}
    - Màu đỏ: Hóa đơn có trong File 1 nhưng không có trong File 2 (${Array.isArray(missingInFile2) ? missingInFile2.length : 0} hàng)
    - Màu vàng: Số hóa đơn khớp nhưng người bán không khớp (${Array.isArray(mismatchedRowsFile1) ? mismatchedRowsFile1.length : 0} hàng)
+   - Màu tím: Hóa đơn trùng lặp trong File 1 (${Array.isArray(duplicatedRowsFile1) ? duplicatedRowsFile1.length : 0} hàng)
 
 2. File: ${file2NameHighlighted}
    - Màu đỏ: Hóa đơn có trong File 2 nhưng không có trong File 1 (${Array.isArray(missingInFile1) ? missingInFile1.length : 0} hàng)
    - Màu vàng: Số hóa đơn khớp nhưng người bán không khớp (${Array.isArray(mismatchedRowsFile2) ? mismatchedRowsFile2.length : 0} hàng)
+   - Màu tím: Hóa đơn trùng lặp trong File 2 (${Array.isArray(duplicatedRowsFile2) ? duplicatedRowsFile2.length : 0} hàng)
 
 Ghi chú: Chỉ những ô có giá trị mới được highlight.`;
   

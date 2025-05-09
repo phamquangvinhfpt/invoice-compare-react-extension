@@ -5,6 +5,7 @@ import JSZip from 'jszip';
 // Các màu highlight
 export const MISSING_INVOICE_COLOR = 'FFFF9999'; // Màu đỏ nhạt
 export const MISMATCHED_SELLER_COLOR = 'FFe9c46a'; // Màu vàng nhạt (thêm FF phía trước)
+export const DUPLICATED_INVOICE_COLOR = '8E7CC3'; // Màu tím nhạt
 
 /**
  * Tạo một workbook mới hoàn toàn từ dữ liệu của workbook cũ
@@ -196,12 +197,14 @@ export const highlightSpecificCells = (worksheet: Worksheet, rowIndex: number, c
  * @param workbook - Workbook cần highlight 
  * @param missingRows - Mảng các chỉ số hàng thiếu
  * @param mismatchRows - Mảng các chỉ số hàng không khớp người bán
+ * @param duplicatedRows - Mảng các chỉ số hàng trùng lặp
  * @param worksheetIndex - Chỉ số của worksheet (0-based)
  */
 export const highlightProblemRowsClean = (
   workbook: Workbook, 
   missingRows: number[], 
   mismatchRows: number[], 
+  duplicatedRows: number[] = [],
   worksheetIndex: number = 0
 ): void => {
   const worksheet = workbook.worksheets[worksheetIndex];
@@ -210,6 +213,7 @@ export const highlightProblemRowsClean = (
   console.log('Worksheet:', worksheet.name);
   console.log('Missing rows:', missingRows);
   console.log('Mismatch rows:', mismatchRows);
+  console.log('Duplicated rows:', duplicatedRows);
   
   // Xử lý hàng thiếu
   if (missingRows && missingRows.length > 0) {
@@ -242,6 +246,23 @@ export const highlightProblemRowsClean = (
     // Highlight từng hàng
     validMismatchRows.forEach(rowIndex => {
       highlightSpecificCells(worksheet, rowIndex, MISMATCHED_SELLER_COLOR);
+    });
+  }
+  
+  // Xử lý hàng trùng lặp
+  if (duplicatedRows && duplicatedRows.length > 0) {
+    console.log(`Highlight ${duplicatedRows.length} hàng trùng lặp với màu tím`);
+    
+    // Lọc và chuyển đổi sang 1-based
+    const validDuplicatedRows = duplicatedRows
+      .filter(row => row !== null && row !== undefined)
+      .map(row => row + 1);
+    
+    console.log('Các hàng trùng lặp (1-based):', validDuplicatedRows);
+    
+    // Highlight từng hàng
+    validDuplicatedRows.forEach(rowIndex => {
+      highlightSpecificCells(worksheet, rowIndex, DUPLICATED_INVOICE_COLOR);
     });
   }
   
@@ -306,6 +327,15 @@ export const addLegendClean = (worksheet: Worksheet): void => {
       fgColor: { argb: MISMATCHED_SELLER_COLOR }
     };
     
+    // Thêm chú thích màu tím
+    const purpleCell = worksheet.getCell(lastRowNum + 3, 1);
+    purpleCell.value = 'Màu tím: Hóa đơn trùng lặp';
+    purpleCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: DUPLICATED_INVOICE_COLOR }
+    };
+    
     console.log(`Đã thêm chú thích tại dòng ${lastRowNum}`);
   } catch (error) {
     console.error("Lỗi khi thêm chú thích:", error);
@@ -323,7 +353,9 @@ export const createAndDownloadCleanZip = async (
   missingInFile1: number[],
   missingInFile2: number[],
   mismatchedRowsFile1: number[],
-  mismatchedRowsFile2: number[]
+  mismatchedRowsFile2: number[],
+  duplicatedRowsFile1: number[] = [],
+  duplicatedRowsFile2: number[] = []
 ): Promise<void> => {
   try {
     console.log('=== CLEAN EXPORT STARTING ===');
@@ -372,6 +404,8 @@ export const createAndDownloadCleanZip = async (
     console.log('Missing in File 2:', missingInFile2.length, 'rows');
     console.log('Mismatched in File 1:', mismatchedRowsFile1.length, 'rows');
     console.log('Mismatched in File 2:', mismatchedRowsFile2.length, 'rows');
+    console.log('Duplicated in File 1:', duplicatedRowsFile1.length, 'rows');
+    console.log('Duplicated in File 2:', duplicatedRowsFile2.length, 'rows');
     
     // Tạo workbook mới từ đầu cho file 1
     console.log('Creating clean workbook for File 1...');
@@ -399,13 +433,13 @@ export const createAndDownloadCleanZip = async (
     }
     
     console.log('Highlighting File 1...');
-    highlightProblemRowsClean(cleanWorkbook1, missingInFile2, mismatchedRowsFile1, 0);
+    highlightProblemRowsClean(cleanWorkbook1, missingInFile2, mismatchedRowsFile1, duplicatedRowsFile1, 0);
     
     // Tạo workbook mới từ đầu cho file 2
     console.log('Creating clean workbook for File 2...');
     const cleanWorkbook2 = await createCleanWorkbook(file2Workbook);
     console.log('Highlighting File 2...');
-    highlightProblemRowsClean(cleanWorkbook2, missingInFile1, mismatchedRowsFile2, 0);
+    highlightProblemRowsClean(cleanWorkbook2, missingInFile1, mismatchedRowsFile2, duplicatedRowsFile2, 0);
     
     // Tạo tên file
     const file1Parts = file1Name.split('.');
@@ -430,10 +464,12 @@ export const createAndDownloadCleanZip = async (
 1. File: ${file1NameHighlighted}
    - Màu đỏ: Hóa đơn có trong File 1 nhưng không có trong File 2 (${missingInFile2.length} hàng)
    - Màu vàng: Số hóa đơn khớp nhưng người bán không khớp (${mismatchedRowsFile1.length} hàng)
+   - Màu tím: Hóa đơn trùng lặp trong File 1 (${duplicatedRowsFile1.length} hàng)
 
 2. File: ${file2NameHighlighted}
    - Màu đỏ: Hóa đơn có trong File 2 nhưng không có trong File 1 (${missingInFile1.length} hàng)
    - Màu vàng: Số hóa đơn khớp nhưng người bán không khớp (${mismatchedRowsFile2.length} hàng)
+   - Màu tím: Hóa đơn trùng lặp trong File 2 (${duplicatedRowsFile2.length} hàng)
 
 Ghi chú: Các file được tạo với phương pháp mới, chỉ highlight chính xác các ô có dữ liệu trong các hàng cần thiết, 
 đồng thời giữ nguyên định dạng gốc của file Excel.`;

@@ -29,7 +29,7 @@ const InfoSection: React.FC = () => {
           </div>
           <div className="ml-3">
             <p className="text-sm text-green-800">
-              <span className="font-medium">Tính năng:</span> Sau khi so sánh, nhấn nút <span className="font-medium">"Tải Excel"</span> để tải về cả hai file với định dạng gốc và các dòng được đánh dấu: <span className="text-red-600 font-medium">màu đỏ</span> cho Hóa Đơn Thiếu và <span className="text-yellow-600 font-medium">màu vàng</span> cho Người Bán Không Khớp.
+              <span className="font-medium">Tính năng:</span> Sau khi so sánh, nhấn nút <span className="font-medium">"Tải Excel"</span> để tải về cả hai file với định dạng gốc và các dòng được đánh dấu: <span className="text-red-600 font-medium">màu đỏ</span> cho Hóa Đơn Thiếu, <span className="text-yellow-600 font-medium">màu vàng</span> cho Người Bán Không Khớp và <span className="text-purple-600 font-medium">màu tím</span> cho Hóa Đơn Trùng Lặp.
             </p>
           </div>
         </div>

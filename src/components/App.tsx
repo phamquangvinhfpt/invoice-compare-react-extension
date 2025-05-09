@@ -209,6 +209,13 @@ const App: React.FC = () => {
       const file1MismatchRows = comparisonResults.mismatchedSellers.map(item => item.file1.row);
       const file2MismatchRows = comparisonResults.mismatchedSellers.map(item => item.file2.row);
       
+      const file1DuplicatedRows = comparisonResults.duplicatedItems
+        .filter(item => item.file1 !== null)
+        .map(item => item.file1!.row);
+      const file2DuplicatedRows = comparisonResults.duplicatedItems
+        .filter(item => item.file2 !== null)
+        .map(item => item.file2!.row);
+      
       // Tạo và tải xuống file ZIP với Excel đã highlight
       await createAndDownloadZip(
         file1Workbook,
@@ -218,7 +225,9 @@ const App: React.FC = () => {
         file2MissingRows,
         file1MissingRows,
         file1MismatchRows,
-        file2MismatchRows
+        file2MismatchRows,
+        file1DuplicatedRows,
+        file2DuplicatedRows
       );
       
       showNotification({

@@ -137,6 +137,12 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
                 missingInFile2={results.missingInFile2.map(item => item.row)}
                 mismatchedRowsFile1={results.mismatchedSellers.map(item => item.file1.row)}
                 mismatchedRowsFile2={results.mismatchedSellers.map(item => item.file2.row)}
+                duplicatedRowsFile1={results.duplicatedItems
+                  .filter(item => item.file1 !== null)
+                  .map(item => item.file1!.row)}
+                duplicatedRowsFile2={results.duplicatedItems
+                  .filter(item => item.file2 !== null)
+                  .map(item => item.file2!.row)}
                 isDisabled={!file1Workbook || !file2Workbook}
               />
             }
