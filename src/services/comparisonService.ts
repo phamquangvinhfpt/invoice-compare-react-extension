@@ -43,14 +43,14 @@ export const extractInvoiceData = (
     const row = data[i];
     
     if (!row || !Array.isArray(row)) {
-      console.log(`Bỏ qua dòng ${i + 1}: không phải mảng`);
+      // console.log(`Bỏ qua dòng ${i + 1}: không phải mảng`);
       continue;
     }
     
     // Kiểm tra có giá trị tại cột hóa đơn không
     const invoiceValue = row[invoiceCol];
     if (invoiceValue === undefined || invoiceValue === null || invoiceValue === '') {
-      console.log(`Bỏ qua dòng ${i + 1}: không có số hóa đơn`);
+      // console.log(`Bỏ qua dòng ${i + 1}: không có số hóa đơn`);
       continue;
     }
     
@@ -77,7 +77,7 @@ export const extractInvoiceData = (
     };
   }
   
-  console.log(`Đã xử lý ${processedCount} dòng, có ${Object.keys(result).length} hóa đơn hợp lệ`);
+  // console.log(`Đã xử lý ${processedCount} dòng, có ${Object.keys(result).length} hóa đơn hợp lệ`);
   return result;
 };
 

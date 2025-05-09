@@ -1,9 +1,7 @@
 // Service worker cho Chrome Extension
 
 // Xử lý sự kiện khi extension được cài đặt
-chrome.runtime.onInstalled.addListener(() => {
-  console.log('Extension đã được cài đặt!');
-  
+chrome.runtime.onInstalled.addListener(() => {  
   // Tạo menu ngữ cảnh cho extension
   chrome.contextMenus.create({
     id: "open-full-page",
@@ -21,7 +19,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 // Lắng nghe các tin nhắn từ popup hoặc nội dung
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('Nhận tin nhắn:', message);
+  // console.log('Nhận tin nhắn:', message);
   
   // Xử lý tin nhắn
   if (message.type === 'OPEN_IN_TAB') {
@@ -29,7 +27,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ status: 'ok' });
   } else if (message.type === 'COMPARISON_COMPLETED') {
     // Có thể xử lý dữ liệu hoặc gửi thông báo
-    console.log('Số khác biệt:', message.differences);
+    // console.log('Số khác biệt:', message.differences);
     sendResponse({ status: 'ok' });
   }
   
