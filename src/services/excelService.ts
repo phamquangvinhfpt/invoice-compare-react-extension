@@ -4,7 +4,7 @@ import JSZip from 'jszip';
 
 // Các màu highlight
 export const MISSING_INVOICE_COLOR = 'FFFF9999'; // Màu đỏ nhạt
-export const MISMATCHED_SELLER_COLOR = 'e9c46a'; // Màu vàng nhạt
+export const MISMATCHED_SELLER_COLOR = 'FFe9c46a'; // Màu vàng nhạt (thêm FF phía trước)
 export const DUPLICATED_INVOICE_COLOR = 'FFA8D1FF'; // Màu tím nhạt cho hóa đơn trùng lặp
 
 /**

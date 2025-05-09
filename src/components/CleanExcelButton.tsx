@@ -40,6 +40,15 @@ const CleanExcelButton: React.FC<CleanExcelButtonProps> = ({
     setIsLoading(true);
     
     try {
+      // Log để debug
+      console.log('CleanExcelButton Debug Info:');
+      console.log('Missing in File 1:', missingInFile1.length);
+      console.log('Missing in File 2:', missingInFile2.length);
+      console.log('Mismatched in File 1:', mismatchedRowsFile1.length);
+      console.log('Mismatched in File 2:', mismatchedRowsFile2.length);
+      console.log('Duplicated in File 1:', duplicatedRowsFile1?.length);
+      console.log('Duplicated in File 2:', duplicatedRowsFile2?.length);
+      
       // Sử dụng phương pháp highlight sạch
       await createAndDownloadCleanZip(
         file1Workbook,
@@ -50,8 +59,8 @@ const CleanExcelButton: React.FC<CleanExcelButtonProps> = ({
         missingInFile2,
         mismatchedRowsFile1,
         mismatchedRowsFile2,
-        duplicatedRowsFile1,
-        duplicatedRowsFile2
+        duplicatedRowsFile1 || [],
+        duplicatedRowsFile2 || []
       );
       
       alert('Đã tạo file Excel với phương pháp mới thành công!');

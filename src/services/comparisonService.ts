@@ -7,13 +7,13 @@ export interface InvoiceItem {
 }
 
 export interface InvoiceMap {
-  [key: string]: InvoiceItem;
+  [key: string]: InvoiceItem[];
 }
 
 export interface MismatchedSellerItem {
   key: string;
-  file1: InvoiceItem;
-  file2: InvoiceItem;
+  file1: InvoiceItem[];
+  file2: InvoiceItem[];
 }
 
 export interface ComparisonResult {
@@ -87,11 +87,14 @@ export const extractInvoiceData = (
     // Thêm vào danh sách tất cả hóa đơn
     allInvoices.push(invoiceItem);
     
-    // Thêm vào map tham chiếu nhanh (lưu ý: nếu có nhiều hóa đơn cùng số, chỉ giữ lại cái cuối)
-    result[normalizedInvoice] = invoiceItem;
+    // Thêm vào map theo số hóa đơn (giờ mỗi key sẽ lưu một mảng các hóa đơn)
+    if (!result[normalizedInvoice]) {
+      result[normalizedInvoice] = [];
+    }
+    result[normalizedInvoice].push(invoiceItem);
   }
   
-  console.log(`Đã xử lý ${processedCount} dòng, có ${Object.keys(result).length} hóa đơn duy nhất và ${allInvoices.length} hóa đơn tổng cộng`);
+  console.log(`Đã xử lý ${processedCount} dòng, có ${Object.keys(result).length} số hóa đơn duy nhất và ${allInvoices.length} hóa đơn tổng cộng`);
   
   return { invoiceMap: result, allInvoices };
 };
@@ -237,55 +240,68 @@ export const compareInvoiceData = (
   
   const file1Keys = Object.keys(file1Invoices);
   const file2Keys = Object.keys(file2Invoices);
+
+  console.log("Số hóa đơn từ file 1:", file1Keys.length);
   
-  console.log("So sánh:", file1Keys.length, "hóa đơn từ file 1 với", file2Keys.length, "hóa đơn từ file 2");
+  console.log("So sánh:", file1Keys.length, "số hóa đơn từ file 1 với", file2Keys.length, "số hóa đơn từ file 2");
   
   // Tìm các hóa đơn có trong file 1 nhưng không có trong file 2
   const missingInFile2 = file1Keys
-    .filter(key => !file2Keys.includes(key) && isNumber(file1Invoices[key].invoiceOriginal))
-    .map(key => ({
-      row: file1Invoices[key].row,
-      invoiceOriginal: file1Invoices[key].invoiceOriginal,
-      seller: file1Invoices[key].seller,
-      position: file1Invoices[key].position
-    }));
+    .filter(key => !file2Keys.includes(key) && isNumber(file1Invoices[key][0].invoiceOriginal))
+    .flatMap(key => file1Invoices[key].map(invoice => ({
+      row: invoice.row,
+      invoiceOriginal: invoice.invoiceOriginal,
+      seller: invoice.seller,
+      position: invoice.position
+    })));
   
   // Tìm các hóa đơn có trong file 2 nhưng không có trong file 1
   const missingInFile1 = file2Keys
-    .filter(key => !file1Keys.includes(key) && isNumber(file2Invoices[key].invoiceOriginal))
-    .map(key => ({
-      row: file2Invoices[key].row,
-      invoiceOriginal: file2Invoices[key].invoiceOriginal,
-      seller: file2Invoices[key].seller,
-      position: file2Invoices[key].position
-    }));
+    .filter(key => !file1Keys.includes(key) && isNumber(file2Invoices[key][0].invoiceOriginal))
+    .flatMap(key => file2Invoices[key].map(invoice => ({
+      row: invoice.row,
+      invoiceOriginal: invoice.invoiceOriginal,
+      seller: invoice.seller,
+      position: invoice.position
+    })));
   
   // Tìm các hóa đơn có cùng số nhưng tên người bán khác nhau
-  const mismatchedSellers = file1Keys
+  const mismatchedSellers: MismatchedSellerItem[] = file1Keys
+    .filter(key => file2Keys.includes(key))
     .filter(key => {
-      if (!file2Keys.includes(key)) return false;
+      // Kiểm tra xem có bất kỳ sự khác biệt nào giữa người bán từ file1 và file2
+      const file1Sellers = file1Invoices[key].map(inv => standardizeSeller(inv.seller));
+      const file2Sellers = file2Invoices[key].map(inv => standardizeSeller(inv.seller));
       
-      const seller1Standardized = standardizeSeller(file1Invoices[key].seller);
-      const seller2Standardized = standardizeSeller(file2Invoices[key].seller);
-      console.log(`So sánh hóa đơn ${file1Invoices[key].invoiceOriginal}: ${seller1Standardized} vs ${seller2Standardized} ở key ${key}`);
+      // So sánh các tập hợp người bán
+      const allSellers = new Set([...file1Sellers, ...file2Sellers]);
       
-      // So sánh tên đã chuẩn hóa
-      return seller1Standardized !== seller2Standardized;
+      // Log để kiểm tra
+      console.log(`So sánh hóa đơn ${key}: File1 có ${file1Invoices[key].length} mục, File2 có ${file2Invoices[key].length} mục`);
+      file1Invoices[key].forEach(inv => {
+        console.log(`  File1: ${inv.position}, ${inv.seller}`);
+      });
+      file2Invoices[key].forEach(inv => {
+        console.log(`  File2: ${inv.position}, ${inv.seller}`);
+      });
+      
+      // Nếu có nhiều người bán khác nhau, có sự không khớp
+      return allSellers.size > 1;
     })
     .map(key => ({
       key: key,
-      file1: {
-        seller: file1Invoices[key].seller,
-        row: file1Invoices[key].row,
-        invoiceOriginal: file1Invoices[key].invoiceOriginal,
-        position: file1Invoices[key].position
-      },
-      file2: {
-        seller: file2Invoices[key].seller,
-        row: file2Invoices[key].row,
-        invoiceOriginal: file2Invoices[key].invoiceOriginal,
-        position: file2Invoices[key].position
-      }
+      file1: file1Invoices[key].map(inv => ({
+        seller: inv.seller,
+        row: inv.row,
+        invoiceOriginal: inv.invoiceOriginal,
+        position: inv.position
+      })),
+      file2: file2Invoices[key].map(inv => ({
+        seller: inv.seller,
+        row: inv.row,
+        invoiceOriginal: inv.invoiceOriginal,
+        position: inv.position
+      }))
     }));
   
   // Tìm các hóa đơn trùng lặp trong mỗi file
@@ -294,79 +310,6 @@ export const compareInvoiceData = (
   
   // Gộp các hóa đơn trùng lặp từ cả hai file
   const duplicatedItems: DuplicatedItem[] = [...duplicatesInFile1, ...duplicatesInFile2];
-  
-  return {
-    missingInFile1,
-    missingInFile2,
-    mismatchedSellers,
-    duplicatedItems
-  };
-};
-
-/**
- * So sánh dữ liệu hóa đơn từ hai file (phiên bản cũ, giữ lại để tương thích)
- * @param file1Invoices - Dữ liệu hóa đơn từ file 1
- * @param file2Invoices - Dữ liệu hóa đơn từ file 2
- * @returns Kết quả so sánh
- */
-export const compareInvoiceData2 = (
-  file1Invoices: InvoiceMap,
-  file2Invoices: InvoiceMap
-): ComparisonResult => {
-  const file1Keys = Object.keys(file1Invoices);
-  const file2Keys = Object.keys(file2Invoices);
-  
-  console.log("So sánh:", file1Keys.length, "hóa đơn từ file 1 với", file2Keys.length, "hóa đơn từ file 2");
-  
-  // Tìm các hóa đơn có trong file 1 nhưng không có trong file 2
-  const missingInFile2 = file1Keys
-    .filter(key => !file2Keys.includes(key) && isNumber(file1Invoices[key].invoiceOriginal))
-    .map(key => ({
-      row: file1Invoices[key].row,
-      invoiceOriginal: file1Invoices[key].invoiceOriginal,
-      seller: file1Invoices[key].seller,
-      position: file1Invoices[key].position
-    }));
-  
-  // Tìm các hóa đơn có trong file 2 nhưng không có trong file 1
-  const missingInFile1 = file2Keys
-    .filter(key => !file1Keys.includes(key) && isNumber(file2Invoices[key].invoiceOriginal))
-    .map(key => ({
-      row: file2Invoices[key].row,
-      invoiceOriginal: file2Invoices[key].invoiceOriginal,
-      seller: file2Invoices[key].seller,
-      position: file2Invoices[key].position
-    }));
-  
-  // Tìm các hóa đơn có cùng số nhưng tên người bán khác nhau
-  const mismatchedSellers = file1Keys
-    .filter(key => {
-      if (!file2Keys.includes(key)) return false;
-      
-      const seller1Standardized = standardizeSeller(file1Invoices[key].seller);
-      const seller2Standardized = standardizeSeller(file2Invoices[key].seller);
-      
-      // So sánh tên đã chuẩn hóa
-      return seller1Standardized !== seller2Standardized;
-    })
-    .map(key => ({
-      key: key,
-      file1: {
-        seller: file1Invoices[key].seller,
-        row: file1Invoices[key].row,
-        invoiceOriginal: file1Invoices[key].invoiceOriginal,
-        position: file1Invoices[key].position
-      },
-      file2: {
-        seller: file2Invoices[key].seller,
-        row: file2Invoices[key].row,
-        invoiceOriginal: file2Invoices[key].invoiceOriginal,
-        position: file2Invoices[key].position
-      }
-    }));
-  
-  // Sử dụng một mảng rỗng cho các hóa đơn trùng lặp (sẽ không tìm thấy trùng lặp với cách tiếp cận này)
-  const duplicatedItems: DuplicatedItem[] = [];
   
   return {
     missingInFile1,

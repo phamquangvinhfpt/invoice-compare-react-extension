@@ -5,7 +5,7 @@ import JSZip from 'jszip';
 // Các màu highlight
 export const MISSING_INVOICE_COLOR = 'FFFF9999'; // Màu đỏ nhạt
 export const MISMATCHED_SELLER_COLOR = 'FFe9c46a'; // Màu vàng nhạt (thêm FF phía trước)
-export const DUPLICATED_INVOICE_COLOR = '8E7CC3'; // Màu tím nhạt
+export const DUPLICATED_INVOICE_COLOR = 'FFA8D1FF'; // Màu tím nhạt (thêm FF phía trước)
 
 /**
  * Tạo một workbook mới hoàn toàn từ dữ liệu của workbook cũ

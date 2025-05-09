@@ -26,11 +26,22 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
     return null;
   }
 
-  const totalDifferences = 
-    results.missingInFile1.length + 
-    results.missingInFile2.length + 
-    results.mismatchedSellers.length +
-    results.duplicatedItems.length;
+  // Tính tổng các khác biệt
+  const totalMismatches = results.missingInFile1.length + 
+                        results.missingInFile2.length + 
+                        results.mismatchedSellers.length;
+                        
+  // Đếm số hóa đơn trùng lặp thực sự (chỉ số)
+  const duplicatedItemsCount = Object.keys(
+    results.duplicatedItems
+      .filter(item => /^\d+$/.test(item.key))
+      .reduce<Record<string, boolean>>((acc, item) => {
+        acc[item.key] = true;
+        return acc;
+      }, {})
+  ).length;
+  
+  const totalDifferences = totalMismatches + duplicatedItemsCount;
 
   // Thành phần hiển thị các hóa đơn thiếu
   const renderMissingInvoice = (item: InvoiceItem, index: number) => (
@@ -42,34 +53,61 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
   );
 
   // Thành phần hiển thị các hóa đơn không khớp người bán
-  const renderMismatchedSeller = (item: MismatchedSellerItem, index: number) => (
-    <div key={index} className="p-4 mb-3 bg-white border border-l-4 border-l-yellow-500 rounded-md shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between mb-2">
-        <p className="font-semibold text-gray-800">Số hóa đơn: {item.file1.invoiceOriginal}</p>
-        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600">{index + 1}/{results.mismatchedSellers.length}</span>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="border-b md:border-b-0 md:border-r border-gray-200 pb-3 md:pb-0 md:pr-3">
-          <div className="flex items-center mb-1">
-            <svg className="h-4 w-4 text-blue-500 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
-            </svg>
-            <p className="text-xs font-medium text-blue-600">File 1 (Dòng {item.file1.position}):</p>
-          </div>
-          <p className="bg-yellow-50 py-2 px-3 rounded text-sm border border-yellow-100">{item.file1.seller}</p>
+  const renderMismatchedSeller = (item: MismatchedSellerItem, index: number) => {
+    // Kiểm tra xem có data từ cả hai file không
+    if (!item.file1 || !item.file1.length || !item.file2 || !item.file2.length) {
+      return null;
+    }
+    
+    return (
+      <div key={index} className="p-4 mb-3 bg-white border border-l-4 border-l-yellow-500 rounded-md shadow-sm hover:shadow-md transition-shadow">
+        <div className="flex items-center justify-between mb-2">
+          <p className="font-semibold text-gray-800">Số hóa đơn: {item.key}</p>
+          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600">{index + 1}/{results.mismatchedSellers.length}</span>
         </div>
-        <div className="pt-3 md:pt-0 md:pl-3">
-          <div className="flex items-center mb-1">
-            <svg className="h-4 w-4 text-green-500 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
-            </svg>
-            <p className="text-xs font-medium text-green-600">File 2 (Dòng {item.file2.position}):</p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="border-b md:border-b-0 md:border-r border-gray-200 pb-3 md:pb-0 md:pr-3">
+            <div className="flex items-center mb-1">
+              <svg className="h-4 w-4 text-blue-500 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+              </svg>
+              <p className="text-xs font-medium text-blue-600">File 1:</p>
+            </div>
+            
+            {/* Hiển thị tất cả các mục từ file 1 */}
+            {item.file1.map((f1Item, idx) => (
+              <div key={`f1-${idx}`} className="mb-2">
+                <p className="bg-yellow-50 py-2 px-3 rounded text-sm border border-yellow-100">
+                  <span className="text-xs text-gray-500 block mb-1">Dòng {f1Item.position}</span>
+                  {f1Item.seller}
+                </p>
+              </div>
+            ))}
           </div>
-          <p className="bg-yellow-50 py-2 px-3 rounded text-sm border border-yellow-100">{item.file2.seller}</p>
+          
+          <div className="pt-3 md:pt-0 md:pl-3">
+            <div className="flex items-center mb-1">
+              <svg className="h-4 w-4 text-green-500 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+              </svg>
+              <p className="text-xs font-medium text-green-600">File 2:</p>
+            </div>
+            
+            {/* Hiển thị tất cả các mục từ file 2 */}
+            {item.file2.map((f2Item, idx) => (
+              <div key={`f2-${idx}`} className="mb-2">
+                <p className="bg-yellow-50 py-2 px-3 rounded text-sm border border-yellow-100">
+                  <span className="text-xs text-gray-500 block mb-1">Dòng {f2Item.position}</span>
+                  {f2Item.seller}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="px-6 py-4 border-t border-gray-200">
@@ -135,8 +173,10 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
                 file2Name={file2Name}
                 missingInFile1={results.missingInFile1.map(item => item.row)}
                 missingInFile2={results.missingInFile2.map(item => item.row)}
-                mismatchedRowsFile1={results.mismatchedSellers.map(item => item.file1.row)}
-                mismatchedRowsFile2={results.mismatchedSellers.map(item => item.file2.row)}
+                mismatchedRowsFile1={results.mismatchedSellers.flatMap(item => 
+                  item.file1 && Array.isArray(item.file1) ? item.file1.map(f => f.row) : [])}
+                mismatchedRowsFile2={results.mismatchedSellers.flatMap(item => 
+                  item.file2 && Array.isArray(item.file2) ? item.file2.map(f => f.row) : [])}
                 duplicatedRowsFile1={results.duplicatedItems
                   .filter(item => item.file1 !== null)
                   .map(item => item.file1!.row)}

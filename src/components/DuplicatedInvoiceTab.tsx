@@ -12,15 +12,17 @@ const DuplicatedInvoiceTab: React.FC<DuplicatedInvoiceTabProps> = ({
   file1Name,
   file2Name 
 }) => {
-  // Nhóm các hóa đơn trùng lặp theo số hóa đơn
-  const groupedDuplicates = duplicatedItems.reduce<Record<string, DuplicatedItem[]>>((acc, item) => {
-    const key = item.key;
-    if (!acc[key]) {
-      acc[key] = [];
-    }
-    acc[key].push(item);
-    return acc;
-  }, {});
+  // Nhóm các hóa đơn trùng lặp theo số hóa đơn và lọc chỉ những hóa đơn là số
+  const groupedDuplicates = duplicatedItems
+    .filter(item => /^\d+$/.test(item.key)) // Chỉ giữ lại các hóa đơn là số
+    .reduce<Record<string, DuplicatedItem[]>>((acc, item) => {
+      const key = item.key;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(item);
+      return acc;
+    }, {});
 
   // Render một nhóm hóa đơn trùng lặp
   const renderDuplicateGroup = (invoice: string, items: DuplicatedItem[], index: number) => (
@@ -63,8 +65,20 @@ const DuplicatedInvoiceTab: React.FC<DuplicatedInvoiceTabProps> = ({
                     </span>
                   }
                 </td>
-                <td className="px-4 py-2 text-sm">{item.file1 ? item.file1.position : item.file2?.position}</td>
-                <td className="px-4 py-2 text-sm">{item.file1 ? item.file1.seller : item.file2?.seller}</td>
+                <td className="px-4 py-2 text-sm">
+                  {item.file1 ? item.file1.position : item.file2?.position}
+                </td>
+                <td className="px-4 py-2 text-sm">
+                  {item.file1 ? (
+                    <span title={`Hóa đơn gốc: ${item.file1.invoiceOriginal}`}>
+                      {item.file1.seller}
+                    </span>
+                  ) : (
+                    <span title={`Hóa đơn gốc: ${item.file2?.invoiceOriginal}`}>
+                      {item.file2?.seller}
+                    </span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

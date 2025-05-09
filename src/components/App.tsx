@@ -15,7 +15,8 @@ import {
   extractInvoiceData, 
   validateInput, 
   compareInvoiceData,
-  ComparisonResult
+  ComparisonResult,
+  isNumber
 } from '../services/comparisonService';
 
 import '../styles/global.css';
@@ -161,10 +162,25 @@ const App: React.FC = () => {
       setShowResults(true);
       
       // Hiển thị thông báo
-      const totalDifferences = results.missingInFile1.length + results.missingInFile2.length + results.mismatchedSellers.length;
+      // Tính tổng các khác biệt
+      const totalMismatches = results.missingInFile1.length + 
+                            results.missingInFile2.length + 
+                            results.mismatchedSellers.length;
+                            
+      // Đếm số hóa đơn trùng lặp thực sự (chỉ số)
+      const duplicatedItemsCount = Object.keys(
+        results.duplicatedItems
+          .filter(item => /^\d+$/.test(item.key))
+          .reduce<Record<string, boolean>>((acc, item) => {
+            acc[item.key] = true;
+            return acc;
+          }, {})
+      ).length;
+      
+      const totalDifferences = totalMismatches + duplicatedItemsCount;
       
       showNotification({
-        message: `So sánh hoàn tất! Đã tìm thấy ${totalDifferences} khác biệt.`,
+        message: `So sánh hoàn tất! Đã tìm thấy ${totalMismatches} khác biệt và ${duplicatedItemsCount} hóa đơn trùng lặp.`,
         type: 'success'
       });
       
@@ -206,15 +222,32 @@ const App: React.FC = () => {
       const file1MissingRows = comparisonResults.missingInFile2.map(item => item.row);
       const file2MissingRows = comparisonResults.missingInFile1.map(item => item.row);
       
-      const file1MismatchRows = comparisonResults.mismatchedSellers.map(item => item.file1.row);
-      const file2MismatchRows = comparisonResults.mismatchedSellers.map(item => item.file2.row);
+      // Chỉ xử lý các trường hợp mismatchedSellers có giá trị hợp lệ
+      const file1MismatchRows = comparisonResults.mismatchedSellers
+        .filter(item => item && item.file1 && Array.isArray(item.file1))
+        .flatMap(item => item.file1.map(inv => inv.row));
       
+      const file2MismatchRows = comparisonResults.mismatchedSellers
+        .filter(item => item && item.file2 && Array.isArray(item.file2))
+        .flatMap(item => item.file2.map(inv => inv.row));
+      
+      // Lọc các mục trùng lặp có giá trị hợp lệ
       const file1DuplicatedRows = comparisonResults.duplicatedItems
-        .filter(item => item.file1 !== null)
+        .filter(item => item.file1 !== null && isNumber(item.key))
         .map(item => item.file1!.row);
+        
       const file2DuplicatedRows = comparisonResults.duplicatedItems
-        .filter(item => item.file2 !== null)
+        .filter(item => item.file2 !== null && isNumber(item.key))
         .map(item => item.file2!.row);
+      
+      // In ra log để debug
+      console.log('Highlight info:');
+      console.log('File 1 Missing Rows:', file1MissingRows.length);
+      console.log('File 2 Missing Rows:', file2MissingRows.length);
+      console.log('File 1 Mismatch Rows:', file1MismatchRows.length);
+      console.log('File 2 Mismatch Rows:', file2MismatchRows.length);
+      console.log('File 1 Duplicated Rows:', file1DuplicatedRows.length);
+      console.log('File 2 Duplicated Rows:', file2DuplicatedRows.length);
       
       // Tạo và tải xuống file ZIP với Excel đã highlight
       await createAndDownloadZip(
