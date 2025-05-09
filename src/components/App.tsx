@@ -146,23 +146,17 @@ const App: React.FC = () => {
         return;
       }
       
-      // Trích xuất dữ liệu
-      const file1Invoices = extractInvoiceData(
+      // So sánh dữ liệu
+      const results = compareInvoiceData(
         file1Data,
+        file2Data,
         file1StartRow,
         file1InvoiceCol,
-        file1SellerCol
-      );
-      
-      const file2Invoices = extractInvoiceData(
-        file2Data,
+        file1SellerCol,
         file2StartRow,
         file2InvoiceCol,
         file2SellerCol
       );
-      
-      // So sánh dữ liệu
-      const results = compareInvoiceData(file1Invoices, file2Invoices);
       setComparisonResults(results);
       setShowResults(true);
       
@@ -298,6 +292,10 @@ const App: React.FC = () => {
             <ResultsDisplay 
               results={comparisonResults}
               onDownload={handleDownloadExcel}
+              file1Workbook={file1Workbook}
+              file2Workbook={file2Workbook}
+              file1Name={file1?.name || 'file1.xlsx'}
+              file2Name={file2?.name || 'file2.xlsx'}
             />
           )}
         </div>

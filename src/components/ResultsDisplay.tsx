@@ -1,13 +1,26 @@
 import React, { useState } from 'react';
 import { ComparisonResult, InvoiceItem, MismatchedSellerItem } from '../services/comparisonService';
+import CleanExcelButton from './CleanExcelButton';
+import DuplicatedInvoiceTab from './DuplicatedInvoiceTab';
 
 interface ResultsDisplayProps {
   results: ComparisonResult | null;
   onDownload: () => void;
+  file1Workbook: any | null;
+  file2Workbook: any | null;
+  file1Name: string;
+  file2Name: string;
 }
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, onDownload }) => {
-  const [activeTab, setActiveTab] = useState<'missing' | 'mismatched'>('missing');
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ 
+  results, 
+  onDownload, 
+  file1Workbook, 
+  file2Workbook, 
+  file1Name, 
+  file2Name 
+}) => {
+  const [activeTab, setActiveTab] = useState<'missing' | 'mismatched' | 'duplicated'>('missing');
 
   if (!results) {
     return null;
@@ -16,7 +29,8 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, onDownload }) 
   const totalDifferences = 
     results.missingInFile1.length + 
     results.missingInFile2.length + 
-    results.mismatchedSellers.length;
+    results.mismatchedSellers.length +
+    results.duplicatedItems.length;
 
   // Thành phần hiển thị các hóa đơn thiếu
   const renderMissingInvoice = (item: InvoiceItem, index: number) => (
@@ -86,8 +100,23 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, onDownload }) 
                 'Người Bán Không Khớp'
               )}
             </button>
+            <button 
+              className={`px-4 py-3 text-sm font-medium ${activeTab === 'duplicated' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'}`}
+              onClick={() => setActiveTab('duplicated')}
+            >
+              {results.duplicatedItems.length > 0 ? (
+                <>
+                  Hóa Đơn Trùng Lặp
+                  <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                    {results.duplicatedItems.length}
+                  </span>
+                </>
+              ) : (
+                'Hóa Đơn Trùng Lặp'
+              )}
+            </button>
           </div>
-          <div className="mx-4">
+          <div className="mx-4 flex space-x-2">
             <button 
               className="px-3 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md flex items-center shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
               onClick={onDownload}
@@ -95,8 +124,22 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, onDownload }) 
               <svg className="w-4 h-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              Tải Excel
+              Tải Excel (Cũ)
             </button>
+            
+            {results && 
+              <CleanExcelButton 
+                file1Workbook={file1Workbook}
+                file2Workbook={file2Workbook}
+                file1Name={file1Name}
+                file2Name={file2Name}
+                missingInFile1={results.missingInFile1.map(item => item.row)}
+                missingInFile2={results.missingInFile2.map(item => item.row)}
+                mismatchedRowsFile1={results.mismatchedSellers.map(item => item.file1.row)}
+                mismatchedRowsFile2={results.mismatchedSellers.map(item => item.file2.row)}
+                isDisabled={!file1Workbook || !file2Workbook}
+              />
+            }
           </div>
         </div>
         
@@ -179,6 +222,15 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, onDownload }) 
               )}
             </div>
           </div>
+        )}
+        
+        {/* Duplicated Invoices Tab */}
+        {activeTab === 'duplicated' && (
+          <DuplicatedInvoiceTab 
+            duplicatedItems={results.duplicatedItems}
+            file1Name={file1Name}
+            file2Name={file2Name}
+          />
         )}
       </div>
     </div>
