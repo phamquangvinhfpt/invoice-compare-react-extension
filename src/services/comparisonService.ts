@@ -3,6 +3,7 @@ export interface InvoiceItem {
   row: number;
   invoiceOriginal: string;
   seller: string;
+  taxCode: string;  // Thêm trường mã số thuế
   position: any;
 }
 
@@ -37,13 +38,15 @@ export interface DuplicatedItem {
  * @param startRow - Dòng bắt đầu
  * @param invoiceCol - Cột chứa số hóa đơn
  * @param sellerCol - Cột chứa tên người bán
+ * @param taxCodeCol - Cột chứa mã số thuế
  * @returns Đối tượng map chứa thông tin hóa đơn và mảng các hóa đơn trùng lặp
  */
 export const extractInvoiceData = (
   data: any[][],
   startRow: number,
   invoiceCol: number,
-  sellerCol: number
+  sellerCol: number,
+  taxCodeCol: number
 ): { invoiceMap: InvoiceMap; allInvoices: InvoiceItem[] } => {
   const result: InvoiceMap = {};
   const allInvoices: InvoiceItem[] = [];
@@ -73,14 +76,16 @@ export const extractInvoiceData = (
       normalizedInvoice = normalizedInvoice.replace(/^0+/, '');
     }
     
-    // Lấy tên người bán
+    // Lấy tên người bán và mã số thuế
     const seller = row[sellerCol] || '';
+    const taxCode = row[taxCodeCol] || '';
     
     // Tạo một đối tượng InvoiceItem mới
     const invoiceItem: InvoiceItem = {
       row: i,
       invoiceOriginal: String(invoiceNumber), // Giữ dạng gốc cho hiển thị
       seller: seller,
+      taxCode: taxCode,
       position: row[0] || (i + 1) // Lưu lại vị trí của hàng trong file, mặc định là số thứ tự dòng
     };
     
@@ -201,7 +206,7 @@ export const isNumber = (value: any): boolean => {
 };
 
 /**
- * Kiểm tra xem hai bản ghi có giống hệt nhau không (bao gồm cả số hóa đơn và người bán)
+ * Kiểm tra xem hai bản ghi có giống hệt nhau không (bao gồm cả số hóa đơn và mã số thuế)
  * @param item1 - Bản ghi thứ nhất
  * @param item2 - Bản ghi thứ hai
  * @returns true nếu hai bản ghi giống hệt nhau
@@ -209,14 +214,25 @@ export const isNumber = (value: any): boolean => {
 export const areRecordsIdentical = (item1: InvoiceItem, item2: InvoiceItem): boolean => {
   if (!item1 || !item2) return false;
   
+  const normalizedTaxCode1 = normalizeTaxCode(item1.taxCode);
+  const normalizedTaxCode2 = normalizeTaxCode(item2.taxCode);
+  
   return item1.invoiceOriginal === item2.invoiceOriginal && 
-         item1.seller === item2.seller;
+         normalizedTaxCode1 === normalizedTaxCode2;
 };
 
 /**
  * So sánh dữ liệu hóa đơn từ hai file
- * @param file1Invoices - Dữ liệu hóa đơn từ file 1
- * @param file2Invoices - Dữ liệu hóa đơn từ file 2
+ * @param file1Data - Dữ liệu từ file 1
+ * @param file2Data - Dữ liệu từ file 2
+ * @param file1StartRow - Dòng bắt đầu của file 1
+ * @param file1InvoiceCol - Cột số hóa đơn trong file 1
+ * @param file1SellerCol - Cột tên người bán trong file 1
+ * @param file1TaxCodeCol - Cột mã số thuế trong file 1
+ * @param file2StartRow - Dòng bắt đầu của file 2
+ * @param file2InvoiceCol - Cột số hóa đơn trong file 2
+ * @param file2SellerCol - Cột tên người bán trong file 2
+ * @param file2TaxCodeCol - Cột mã số thuế trong file 2
  * @returns Kết quả so sánh
  */
 export const compareInvoiceData = (
@@ -225,13 +241,15 @@ export const compareInvoiceData = (
   file1StartRow: number,
   file1InvoiceCol: number,
   file1SellerCol: number,
+  file1TaxCodeCol: number,
   file2StartRow: number,
   file2InvoiceCol: number,
-  file2SellerCol: number
+  file2SellerCol: number,
+  file2TaxCodeCol: number
 ): ComparisonResult => {
-  // Trích xuất dữ liệu từ cả hai file, bao gồm tất cả hóa đơn (kể cả trùng lặp)
-  const file1Result = extractInvoiceData(file1Data, file1StartRow, file1InvoiceCol, file1SellerCol);
-  const file2Result = extractInvoiceData(file2Data, file2StartRow, file2InvoiceCol, file2SellerCol);
+  // Trích xuất dữ liệu từ cả hai file
+  const file1Result = extractInvoiceData(file1Data, file1StartRow, file1InvoiceCol, file1SellerCol, file1TaxCodeCol);
+  const file2Result = extractInvoiceData(file2Data, file2StartRow, file2InvoiceCol, file2SellerCol, file2TaxCodeCol);
   
   const file1Invoices = file1Result.invoiceMap;
   const file2Invoices = file2Result.invoiceMap;
@@ -242,75 +260,50 @@ export const compareInvoiceData = (
   const file2Keys = Object.keys(file2Invoices);
 
   console.log("Số hóa đơn từ file 1:", file1Keys.length);
-  
   console.log("So sánh:", file1Keys.length, "số hóa đơn từ file 1 với", file2Keys.length, "số hóa đơn từ file 2");
   
   // Tìm các hóa đơn có trong file 1 nhưng không có trong file 2
   const missingInFile2 = file1Keys
     .filter(key => !file2Keys.includes(key) && isNumber(file1Invoices[key][0].invoiceOriginal))
-    .flatMap(key => file1Invoices[key].map(invoice => ({
-      row: invoice.row,
-      invoiceOriginal: invoice.invoiceOriginal,
-      seller: invoice.seller,
-      position: invoice.position
-    })));
-  
+    .flatMap(key => file1Invoices[key]);
+
   // Tìm các hóa đơn có trong file 2 nhưng không có trong file 1
   const missingInFile1 = file2Keys
     .filter(key => !file1Keys.includes(key) && isNumber(file2Invoices[key][0].invoiceOriginal))
-    .flatMap(key => file2Invoices[key].map(invoice => ({
-      row: invoice.row,
-      invoiceOriginal: invoice.invoiceOriginal,
-      seller: invoice.seller,
-      position: invoice.position
-    })));
+    .flatMap(key => file2Invoices[key]);
+
+  // Tìm các hóa đơn có số giống nhau nhưng mã số thuế khác nhau
+  const mismatchedSellers: MismatchedSellerItem[] = [];
   
-  // Tìm các hóa đơn có cùng số nhưng tên người bán khác nhau
-  const mismatchedSellers: MismatchedSellerItem[] = file1Keys
-    .filter(key => file2Keys.includes(key))
-    .filter(key => {
-      // Kiểm tra xem có bất kỳ sự khác biệt nào giữa người bán từ file1 và file2
-      const file1Sellers = file1Invoices[key].map(inv => standardizeSeller(inv.seller));
-      const file2Sellers = file2Invoices[key].map(inv => standardizeSeller(inv.seller));
+  file1Keys.forEach(key => {
+    if (file2Keys.includes(key) && isNumber(key)) {
+      const file1Items = file1Invoices[key];
+      const file2Items = file2Invoices[key];
       
-      // So sánh các tập hợp người bán
-      const allSellers = new Set([...file1Sellers, ...file2Sellers]);
+      // Kiểm tra xem có sự khác biệt về mã số thuế không
+      const hasMismatch = file1Items.some(f1Item => 
+        file2Items.some(f2Item => 
+          normalizeTaxCode(f1Item.taxCode) !== normalizeTaxCode(f2Item.taxCode)
+        )
+      );
       
-      // Log để kiểm tra
-      console.log(`So sánh hóa đơn ${key}: File1 có ${file1Invoices[key].length} mục, File2 có ${file2Invoices[key].length} mục`);
-      file1Invoices[key].forEach(inv => {
-        console.log(`  File1: ${inv.position}, ${inv.seller}`);
-      });
-      file2Invoices[key].forEach(inv => {
-        console.log(`  File2: ${inv.position}, ${inv.seller}`);
-      });
-      
-      // Nếu có nhiều người bán khác nhau, có sự không khớp
-      return allSellers.size > 1;
-    })
-    .map(key => ({
-      key: key,
-      file1: file1Invoices[key].map(inv => ({
-        seller: inv.seller,
-        row: inv.row,
-        invoiceOriginal: inv.invoiceOriginal,
-        position: inv.position
-      })),
-      file2: file2Invoices[key].map(inv => ({
-        seller: inv.seller,
-        row: inv.row,
-        invoiceOriginal: inv.invoiceOriginal,
-        position: inv.position
-      }))
-    }));
-  
+      if (hasMismatch) {
+        mismatchedSellers.push({
+          key: key,
+          file1: file1Items,
+          file2: file2Items
+        });
+      }
+    }
+  });
+
   // Tìm các hóa đơn trùng lặp trong mỗi file
-  const duplicatesInFile1 = findDuplicateInvoices(file1AllInvoices, true);
-  const duplicatesInFile2 = findDuplicateInvoices(file2AllInvoices, false);
+  const duplicatedInFile1 = findDuplicateInvoices(file1AllInvoices, true);
+  const duplicatedInFile2 = findDuplicateInvoices(file2AllInvoices, false);
   
-  // Gộp các hóa đơn trùng lặp từ cả hai file
-  const duplicatedItems: DuplicatedItem[] = [...duplicatesInFile1, ...duplicatesInFile2];
-  
+  // Kết hợp các hóa đơn trùng lặp
+  const duplicatedItems = [...duplicatedInFile1, ...duplicatedInFile2];
+
   return {
     missingInFile1,
     missingInFile2,
@@ -321,9 +314,10 @@ export const compareInvoiceData = (
 
 /**
  * Kiểm tra tính hợp lệ của dữ liệu đầu vào
- * @param invoiceCol - Cột chứa số hóa đơn
+ * @param invoiceCol - Cột số hóa đơn
  * @param invoiceRow - Dòng bắt đầu
- * @param sellerCol - Cột chứa tên người bán
+ * @param sellerCol - Cột tên người bán
+ * @param taxCodeCol - Cột mã số thuế
  * @param fileData - Dữ liệu file
  * @returns true nếu dữ liệu hợp lệ
  */
@@ -331,24 +325,60 @@ export const validateInput = (
   invoiceCol: number,
   invoiceRow: number,
   sellerCol: number,
+  taxCodeCol: number,
   fileData: any[][]
 ): boolean => {
-  if (invoiceCol < 0 || invoiceRow < 0 || sellerCol < 0) {
+  // Kiểm tra dữ liệu đầu vào
+  if (!fileData || !Array.isArray(fileData) || fileData.length === 0) {
+    console.error('Dữ liệu file không hợp lệ');
     return false;
   }
   
-  if (!fileData || fileData.length <= invoiceRow) {
+  // Kiểm tra chỉ số cột và dòng
+  if (invoiceCol < 0 || sellerCol < 0 || taxCodeCol < 0 || invoiceRow < 0) {
+    console.error('Chỉ số cột hoặc dòng không hợp lệ');
     return false;
   }
   
-  // Kiểm tra số cột trong dữ liệu
-  const maxCols = Math.max(
-    ...fileData.slice(invoiceRow).map(row => Array.isArray(row) ? row.length : 0)
-  );
+  // Kiểm tra xem có đủ dữ liệu không
+  if (fileData.length <= invoiceRow) {
+    console.error('Không đủ dữ liệu trong file');
+    return false;
+  }
   
-  if (maxCols <= invoiceCol || maxCols <= sellerCol) {
+  // Kiểm tra xem các cột có tồn tại không
+  const firstRow = fileData[invoiceRow];
+  if (!firstRow || !Array.isArray(firstRow)) {
+    console.error('Dữ liệu dòng không hợp lệ');
+    return false;
+  }
+  
+  if (invoiceCol >= firstRow.length || sellerCol >= firstRow.length || taxCodeCol >= firstRow.length) {
+    console.error('Chỉ số cột vượt quá kích thước dữ liệu');
     return false;
   }
   
   return true;
+};
+
+/**
+ * Chuẩn hóa mã số thuế
+ * @param taxCode - Mã số thuế cần chuẩn hóa
+ * @returns Mã số thuế đã chuẩn hóa
+ */
+export const normalizeTaxCode = (taxCode: string | undefined): string => {
+  if (!taxCode) return '';
+  
+  // Loại bỏ khoảng trắng và chuyển về chữ thường
+  let normalized = String(taxCode).trim().toLowerCase();
+  
+  // Nếu có dấu gạch ngang, chỉ lấy phần trước dấu gạch
+  if (normalized.includes('-')) {
+    normalized = normalized.split('-')[0];
+  }
+  
+  // Loại bỏ các ký tự không phải số
+  normalized = normalized.replace(/[^0-9]/g, '');
+  
+  return normalized;
 };

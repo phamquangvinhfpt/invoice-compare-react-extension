@@ -38,3 +38,5 @@ sketch
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,react
 /invoice-compare-react-extension.rar
+/.vscode
+/.vscode/settings.json

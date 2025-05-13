@@ -34,11 +34,13 @@ const App: React.FC = () => {
   const [file1Settings, setFile1Settings] = useState<FileSettingsValues>({
     invoiceCol: 1,
     sellerCol: 2,
+    taxCodeCol: 3,
     startRow: 1
   });
   const [file2Settings, setFile2Settings] = useState<FileSettingsValues>({
     invoiceCol: 1,
     sellerCol: 2,
+    taxCodeCol: 3,
     startRow: 1
   });
   
@@ -123,13 +125,15 @@ const App: React.FC = () => {
       const file1InvoiceCol = file1Settings.invoiceCol - 1;
       const file1StartRow = file1Settings.startRow - 1;
       const file1SellerCol = file1Settings.sellerCol - 1;
+      const file1TaxCodeCol = file1Settings.taxCodeCol - 1;
       
       const file2InvoiceCol = file2Settings.invoiceCol - 1;
       const file2StartRow = file2Settings.startRow - 1;
       const file2SellerCol = file2Settings.sellerCol - 1;
+      const file2TaxCodeCol = file2Settings.taxCodeCol - 1;
       
       // Kiểm tra dữ liệu đầu vào
-      if (!validateInput(file1InvoiceCol, file1StartRow, file1SellerCol, file1Data)) {
+      if (!validateInput(file1InvoiceCol, file1StartRow, file1SellerCol, file1TaxCodeCol, file1Data)) {
         showNotification({
           message: 'Cấu hình File 1 không hợp lệ. Vui lòng kiểm tra lại.',
           type: 'error'
@@ -138,7 +142,7 @@ const App: React.FC = () => {
         return;
       }
       
-      if (!validateInput(file2InvoiceCol, file2StartRow, file2SellerCol, file2Data)) {
+      if (!validateInput(file2InvoiceCol, file2StartRow, file2SellerCol, file2TaxCodeCol, file2Data)) {
         showNotification({
           message: 'Cấu hình File 2 không hợp lệ. Vui lòng kiểm tra lại.',
           type: 'error'
@@ -154,9 +158,11 @@ const App: React.FC = () => {
         file1StartRow,
         file1InvoiceCol,
         file1SellerCol,
+        file1TaxCodeCol,
         file2StartRow,
         file2InvoiceCol,
-        file2SellerCol
+        file2SellerCol,
+        file2TaxCodeCol
       );
       setComparisonResults(results);
       setShowResults(true);

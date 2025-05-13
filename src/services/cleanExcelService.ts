@@ -196,7 +196,7 @@ export const highlightSpecificCells = (worksheet: Worksheet, rowIndex: number, c
  * Highlight các hàng có vấn đề trong file Excel
  * @param workbook - Workbook cần highlight 
  * @param missingRows - Mảng các chỉ số hàng thiếu
- * @param mismatchRows - Mảng các chỉ số hàng không khớp người bán
+ * @param mismatchRows - Mảng các chỉ số hàng không khớp mã số thuế
  * @param duplicatedRows - Mảng các chỉ số hàng trùng lặp
  * @param worksheetIndex - Chỉ số của worksheet (0-based)
  */
@@ -232,16 +232,16 @@ export const highlightProblemRowsClean = (
     });
   }
   
-  // Xử lý hàng không khớp
+  // Xử lý hàng không khớp mã số thuế
   if (mismatchRows && mismatchRows.length > 0) {
-    console.log(`Highlight ${mismatchRows.length} hàng không khớp với màu vàng`);
+    console.log(`Highlight ${mismatchRows.length} hàng có mã số thuế không khớp với màu vàng`);
     
     // Lọc và chuyển đổi sang 1-based
     const validMismatchRows = mismatchRows
       .filter(row => row !== null && row !== undefined)
       .map(row => row + 1);
     
-    console.log('Các hàng không khớp (1-based):', validMismatchRows);
+    console.log('Các hàng mã số thuế không khớp (1-based):', validMismatchRows);
     
     // Highlight từng hàng
     validMismatchRows.forEach(rowIndex => {
@@ -320,7 +320,7 @@ export const addLegendClean = (worksheet: Worksheet): void => {
 
     // Thêm chú thích màu vàng
     const yellowCell = worksheet.getCell(lastRowNum + 2, 1);
-    yellowCell.value = 'Màu vàng: Người bán không khớp';
+    yellowCell.value = 'Màu vàng: Mã số thuế không khớp';
     yellowCell.fill = {
       type: 'pattern',
       pattern: 'solid',
@@ -402,8 +402,8 @@ export const createAndDownloadCleanZip = async (
     console.log('File 2:', file2Name);
     console.log('Missing in File 1:', missingInFile1.length, 'rows');
     console.log('Missing in File 2:', missingInFile2.length, 'rows');
-    console.log('Mismatched in File 1:', mismatchedRowsFile1.length, 'rows');
-    console.log('Mismatched in File 2:', mismatchedRowsFile2.length, 'rows');
+    console.log('Mismatched MST in File 1:', mismatchedRowsFile1.length, 'rows');
+    console.log('Mismatched MST in File 2:', mismatchedRowsFile2.length, 'rows');
     console.log('Duplicated in File 1:', duplicatedRowsFile1.length, 'rows');
     console.log('Duplicated in File 2:', duplicatedRowsFile2.length, 'rows');
     
@@ -444,11 +444,11 @@ export const createAndDownloadCleanZip = async (
     // Tạo tên file
     const file1Parts = file1Name.split('.');
     const file1Ext = file1Parts.pop() || 'xlsx';
-    const file1NameHighlighted = `${file1Parts.join('.')}_clean.${file1Ext}`;
+    const file1NameHighlighted = `${file1Parts.join('.')}_MST.${file1Ext}`;
     
     const file2Parts = file2Name.split('.');
     const file2Ext = file2Parts.pop() || 'xlsx';
-    const file2NameHighlighted = `${file2Parts.join('.')}_clean.${file2Ext}`;
+    const file2NameHighlighted = `${file2Parts.join('.')}_MST.${file2Ext}`;
     
     // Export và thêm vào ZIP
     console.log('Exporting workbooks to buffer...');
@@ -459,27 +459,26 @@ export const createAndDownloadCleanZip = async (
     zip.file(file2NameHighlighted, buffer2);
     
     // Thêm readme
-    const readme = `THÔNG TIN CÁC FILE HIGHLIGHT (PHƯƠNG PHÁP TẠO MỚI)
+    const readme = `THÔNG TIN CÁC FILE HIGHLIGHT (PHƯƠNG PHÁP MST)
 
 1. File: ${file1NameHighlighted}
    - Màu đỏ: Hóa đơn có trong File 1 nhưng không có trong File 2 (${missingInFile2.length} hàng)
-   - Màu vàng: Số hóa đơn khớp nhưng người bán không khớp (${mismatchedRowsFile1.length} hàng)
+   - Màu vàng: Số hóa đơn khớp nhưng mã số thuế không khớp (${mismatchedRowsFile1.length} hàng)
    - Màu tím: Hóa đơn trùng lặp trong File 1 (${duplicatedRowsFile1.length} hàng)
 
 2. File: ${file2NameHighlighted}
    - Màu đỏ: Hóa đơn có trong File 2 nhưng không có trong File 1 (${missingInFile1.length} hàng)
-   - Màu vàng: Số hóa đơn khớp nhưng người bán không khớp (${mismatchedRowsFile2.length} hàng)
+   - Màu vàng: Số hóa đơn khớp nhưng mã số thuế không khớp (${mismatchedRowsFile2.length} hàng)
    - Màu tím: Hóa đơn trùng lặp trong File 2 (${duplicatedRowsFile2.length} hàng)
 
-Ghi chú: Các file được tạo với phương pháp mới, chỉ highlight chính xác các ô có dữ liệu trong các hàng cần thiết, 
-đồng thời giữ nguyên định dạng gốc của file Excel.`;
+Ghi chú: Phương pháp MST so sánh mã số thuế thay vì tên người bán, đồng thời giữ nguyên định dạng gốc của file Excel.`;
     
     zip.file("readme.txt", readme);
     
     // Tạo ZIP và tải xuống
     const now = new Date();
     const dateStr = `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}_${now.getHours()}-${now.getMinutes()}`;
-    const zipFileName = `ket_qua_clean_${dateStr}.zip`;
+    const zipFileName = `ket_qua_MST_${dateStr}.zip`;
     
     console.log(`Creating ZIP file: ${zipFileName}`);
     const content = await zip.generateAsync({ type: "blob" });

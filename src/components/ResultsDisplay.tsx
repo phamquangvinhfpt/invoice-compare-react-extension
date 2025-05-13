@@ -59,6 +59,25 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
       return null;
     }
     
+    // Lấy tất cả mã số thuế từ file 1
+    const file1TaxCodes = item.file1.map(f => f.taxCode).filter(Boolean);
+    
+    // Lấy tất cả mã số thuế từ file 2
+    const file2TaxCodes = item.file2.map(f => f.taxCode).filter(Boolean);
+    
+    // Loại bỏ các mã trùng nhau chỉ khi file có nhiều hơn 1 mã MST
+    let taxCodesToShowInFile1 = file1TaxCodes;
+    let taxCodesToShowInFile2 = file2TaxCodes;
+    
+    // Chỉ lọc bỏ các mã trùng nếu file đó có nhiều hơn 1 mã
+    if (file1TaxCodes.length > 1) {
+      taxCodesToShowInFile1 = file1TaxCodes.filter(taxCode => !file2TaxCodes.includes(taxCode));
+    }
+    
+    if (file2TaxCodes.length > 1) {
+      taxCodesToShowInFile2 = file2TaxCodes.filter(taxCode => !file1TaxCodes.includes(taxCode));
+    }
+    
     return (
       <div key={index} className="p-4 mb-3 bg-white border border-l-4 border-l-yellow-500 rounded-md shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between mb-2">
@@ -75,15 +94,25 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
               <p className="text-xs font-medium text-blue-600">File 1:</p>
             </div>
             
-            {/* Hiển thị tất cả các mục từ file 1 */}
-            {item.file1.map((f1Item, idx) => (
+            {/* Hiển thị mục từ file 1 theo điều kiện lọc */}
+            {item.file1.filter(f1Item => taxCodesToShowInFile1.includes(f1Item.taxCode)).map((f1Item, idx) => (
               <div key={`f1-${idx}`} className="mb-2">
                 <p className="bg-yellow-50 py-2 px-3 rounded text-sm border border-yellow-100">
                   <span className="text-xs text-gray-500 block mb-1">Dòng {f1Item.position}</span>
-                  {f1Item.seller}
+                  <div className="flex flex-col">
+                    <span className="font-medium">{f1Item.seller}</span>
+                    <span className="text-xs text-gray-600 mt-1">MST: {f1Item.taxCode}</span>
+                  </div>
                 </p>
               </div>
             ))}
+            
+            {/* Hiển thị thông báo nếu không có MST để hiển thị */}
+            {taxCodesToShowInFile1.length === 0 && (
+              <div className="text-center text-sm text-gray-500 py-3">
+                Không có mã số thuế khác biệt để hiển thị
+              </div>
+            )}
           </div>
           
           <div className="pt-3 md:pt-0 md:pl-3">
@@ -94,15 +123,25 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
               <p className="text-xs font-medium text-green-600">File 2:</p>
             </div>
             
-            {/* Hiển thị tất cả các mục từ file 2 */}
-            {item.file2.map((f2Item, idx) => (
+            {/* Hiển thị thông tin doanh nghiệp theo điều kiện lọc */}
+            {item.file2.filter(f2Item => taxCodesToShowInFile2.includes(f2Item.taxCode)).map((f2Item, idx) => (
               <div key={`f2-${idx}`} className="mb-2">
                 <p className="bg-yellow-50 py-2 px-3 rounded text-sm border border-yellow-100">
                   <span className="text-xs text-gray-500 block mb-1">Dòng {f2Item.position}</span>
-                  {f2Item.seller}
+                  <div className="flex flex-col">
+                    <span className="font-medium">{f2Item.seller}</span>
+                    <span className="text-xs text-gray-600 mt-1">MST: {f2Item.taxCode}</span>
+                  </div>
                 </p>
               </div>
             ))}
+            
+            {/* Hiển thị thông báo nếu không có MST để hiển thị */}
+            {taxCodesToShowInFile2.length === 0 && (
+              <div className="text-center text-sm text-gray-500 py-3">
+                Không có mã số thuế khác biệt để hiển thị
+              </div>
+            )}
           </div>
         </div>
       </div>
