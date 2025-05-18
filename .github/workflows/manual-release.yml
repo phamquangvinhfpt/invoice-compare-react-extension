@@ -32,6 +32,9 @@ jobs:
       - name: Bump version
         id: bump-version
         run: |
+          # Pull các thay đổi mới nhất để tránh lỗi non-fast-forward
+          git pull origin master
+          
           # Chạy script tăng phiên bản với ghi chú từ input
           node ./scripts/version-bump.js "${{ github.event.inputs.release_notes || 'Cập nhật tính năng và sửa lỗi' }}"
           
@@ -60,6 +63,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ github.ref }}
+          force: true
       
       - name: Create tag
         run: |
