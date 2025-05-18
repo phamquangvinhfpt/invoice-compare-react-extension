@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "So Sánh Hóa Đơn Excel",
-  "version": "1.0.2",
+  "version": "1.0.1",
   "description": "So sánh số hóa đơn và thông tin người bán giữa hai file Excel",
   "action": {
     "default_popup": "popup.html",
