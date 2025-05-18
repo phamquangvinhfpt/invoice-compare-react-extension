@@ -1,6 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import ManualUpdateChecker from './ManualUpdateChecker';
 
 const InfoSection: React.FC = () => {
+  const [version, setVersion] = useState('1.0.0');
+
+  useEffect(() => {
+    // Thử lấy phiên bản từ version.json
+    try {
+      const versionInfo = require('../version.json');
+      if (versionInfo && versionInfo.version) {
+        setVersion(versionInfo.version);
+      }
+    } catch (e) {
+      console.log('Không thể đọc thông tin phiên bản:', e);
+      // Lấy phiên bản từ manifest bằng API chrome nếu có thể
+      if (chrome && chrome.runtime && chrome.runtime.getManifest) {
+        const manifest = chrome.runtime.getManifest();
+        setVersion(manifest.version);
+      }
+    }
+  }, []);
+
   return (
     <>
       {/* Alert/Note */}
@@ -60,8 +80,14 @@ const InfoSection: React.FC = () => {
         </div>
       </div>
 
-      <div className="text-center mt-4 pb-4 text-xs text-gray-500">
-        © 2025 So Sánh Hóa Đơn Excel | Phiên bản 1.0
+      {/* Manual Update Checker */}
+      <div className="px-6 py-2 border-t border-gray-200 bg-gray-50">
+        <h3 className="text-md font-medium text-gray-800 mb-2 text-center">Cập Nhật</h3>
+        <ManualUpdateChecker />
+      </div>
+
+      <div className="text-center pb-4 text-xs text-gray-500">
+        © 2025 So Sánh Hóa Đơn Excel | Phiên bản {version}
       </div>
     </>
   );

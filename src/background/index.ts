@@ -1,4 +1,8 @@
 // Service worker cho Chrome Extension
+import { checkForUpdates, markUpdateNotified, wasUpdateNotified } from '../services/update/updateService';
+
+// Khởi tạo khoảng thời gian kiểm tra cập nhật (2 ngày = 172800000 ms)
+const UPDATE_CHECK_INTERVAL = 172800000;
 
 // Xử lý sự kiện khi extension được cài đặt
 chrome.runtime.onInstalled.addListener(() => {  
@@ -8,6 +12,95 @@ chrome.runtime.onInstalled.addListener(() => {
     title: "Mở toàn màn hình",
     contexts: ["action"] // Hiển thị khi nhấp chuột phải vào icon extension
   });
+  
+  // Kiểm tra cập nhật khi extension được cài đặt hoặc cập nhật
+  scheduleUpdateCheck();
+  
+  // Thiết lập kiểm tra cập nhật định kỳ
+  chrome.alarms.create('checkForUpdates', {
+    periodInMinutes: UPDATE_CHECK_INTERVAL / (60 * 1000)
+  });
+});
+
+// Lắng nghe sự kiện báo thức để kiểm tra cập nhật
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'checkForUpdates') {
+    scheduleUpdateCheck();
+  }
+});
+
+// Hàm kiểm tra cập nhật
+async function scheduleUpdateCheck() {
+  const updateInfo = await checkForUpdates();
+  
+  if (updateInfo.available) {
+    // Kiểm tra xem đã thông báo người dùng về phiên bản này chưa
+    const alreadyNotified = await wasUpdateNotified(updateInfo.newVersion || '');
+    
+    if (!alreadyNotified && updateInfo.newVersion) {
+      // Tạo thông báo cho người dùng
+      chrome.notifications.create('update-available', {
+        type: 'basic',
+        iconUrl: 'images/excel.webp',
+        title: 'Có bản cập nhật mới!',
+        message: `Phiên bản mới ${updateInfo.newVersion} đã sẵn sàng. Nhấp để cập nhật.`,
+        priority: 2,
+        buttons: [
+          { title: 'Tải xuống' },
+          { title: 'Xem chi tiết' }
+        ]
+      });
+      
+      // Lưu URL tải xuống và URL xem chi tiết
+      chrome.storage.local.set({ 
+        updateDownloadUrl: updateInfo.downloadUrl || '', 
+        updateDetailsUrl: updateInfo.updateUrl || '' 
+      });
+      
+      // Đánh dấu đã thông báo
+      markUpdateNotified(updateInfo.newVersion);
+    }
+  }
+}
+
+// Xử lý khi người dùng nhấp vào thông báo
+chrome.notifications.onClicked.addListener((notificationId) => {
+  if (notificationId === 'update-available') {
+    // Trường hợp người dùng nhấp vào thông báo chính, mở trang tải xuống nếu có
+    chrome.storage.local.get(['updateDownloadUrl', 'updateDetailsUrl'], (data) => {
+      const url = data.updateDownloadUrl || data.updateDetailsUrl;
+      if (url) {
+        chrome.tabs.create({ url });
+      } else {
+        // Fallback nếu không có URL nào được lưu
+        checkForUpdates().then(updateInfo => {
+          if (updateInfo.updateUrl) {
+            chrome.tabs.create({ url: updateInfo.updateUrl });
+          }
+        });
+      }
+    });
+  }
+});
+
+// Xử lý khi người dùng nhấp vào các nút trong thông báo
+chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
+  if (notificationId === 'update-available') {
+    chrome.storage.local.get(['updateDownloadUrl', 'updateDetailsUrl'], (data) => {
+      if (buttonIndex === 0) {
+        // Nút "Tải xuống"
+        const url = data.updateDownloadUrl || data.updateDetailsUrl;
+        if (url) {
+          chrome.tabs.create({ url });
+        }
+      } else if (buttonIndex === 1) {
+        // Nút "Xem chi tiết"
+        if (data.updateDetailsUrl) {
+          chrome.tabs.create({ url: data.updateDetailsUrl });
+        }
+      }
+    });
+  }
 });
 
 // Xử lý khi menu ngữ cảnh được nhấp
@@ -29,6 +122,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Có thể xử lý dữ liệu hoặc gửi thông báo
     // console.log('Số khác biệt:', message.differences);
     sendResponse({ status: 'ok' });
+  } else if (message.type === 'CHECK_FOR_UPDATES') {
+    // Cho phép kiểm tra cập nhật theo yêu cầu
+    scheduleUpdateCheck();
+    sendResponse({ status: 'checking' });
   }
   
   // Trả về true để giữ kết nối mở cho phản hồi bất đồng bộ

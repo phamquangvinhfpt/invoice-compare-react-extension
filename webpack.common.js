@@ -23,10 +23,18 @@ module.exports = {
         test: /\.(jpg|jpeg|png|woff|woff2|eot|ttf|svg|webp)$/,
         type: 'asset/resource'
       },
+      {
+        test: /package\.json$/,
+        type: 'json'
+      },
     ],
   },
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
+    fallback: {
+      "path": false,
+      "fs": false
+    }
   },
   plugins: [
     new CleanWebpackPlugin({

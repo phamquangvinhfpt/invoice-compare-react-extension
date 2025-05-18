@@ -4,6 +4,7 @@ import FileContainer from './FileContainer';
 import CompareButton from './CompareButton';
 import ResultsDisplay from './ResultsDisplay';
 import InfoSection from './InfoSection';
+import UpdateNotifier from './UpdateNotifier';
 import { FileSettingsValues } from './FileSettings';
 import { showNotification } from '../services/notificationService';
 import { 
@@ -348,6 +349,11 @@ const App: React.FC = () => {
               </button>
             </div>
           )}
+        </div>
+        
+        {/* Update Notifier - Hiển thị thông tin phiên bản */}
+        <div className="px-6 py-2">
+          <UpdateNotifier />
         </div>
         
         {/* Info section */}

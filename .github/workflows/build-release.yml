@@ -1,0 +1,86 @@
+name: Build and Release Extension
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - '.github/**'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Bump version
+        id: bump-version
+        run: |
+          # Chạy script tăng phiên bản
+          node ./scripts/version-bump.js "Cập nhật tính năng và sửa lỗi tự động từ commit ${GITHUB_SHA::7}"
+          
+          # Lấy phiên bản mới từ package.json
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          
+          # Commit thay đổi phiên bản
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add package.json public/manifest.json src/version.json
+          git commit -m "Bump version to $NEW_VERSION [skip ci]"
+      
+      - name: Build extension
+        run: npm run build
+      
+      - name: Create Zip File
+        run: |
+          cd dist
+          zip -r ../invoice-compare-extension-v${{ steps.bump-version.outputs.version }}.zip *
+          cd ..
+      
+      - name: Push version changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+      
+      - name: Create tag
+        run: |
+          git tag v${{ steps.bump-version.outputs.version }}
+          git push --tags
+      
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.bump-version.outputs.version }}
+          name: Phiên bản ${{ steps.bump-version.outputs.version }}
+          body: |
+            ## Phiên bản ${{ steps.bump-version.outputs.version }}
+            
+            Cập nhật tính năng và sửa lỗi từ commit ${GITHUB_SHA::7}
+            
+            ### Cách cài đặt:
+            1. Tải file zip đính kèm
+            2. Giải nén vào một thư mục
+            3. Mở Chrome và vào địa chỉ chrome://extensions/
+            4. Bật chế độ Developer Mode (góc trên bên phải)
+            5. Nhấp vào "Load unpacked" và chọn thư mục đã giải nén
+          files: invoice-compare-extension-v${{ steps.bump-version.outputs.version }}.zip
+          draft: false
+          prerelease: false

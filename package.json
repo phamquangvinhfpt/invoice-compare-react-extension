@@ -1,11 +1,12 @@
 {
   "name": "invoice-compare-react-extension",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "So sánh số hóa đơn và thông tin người bán giữa hai file Excel sử dụng React & TypeScript",
   "scripts": {
     "start": "webpack --watch --progress --config webpack.dev.js",
-    "build": "webpack --progress --config webpack.prod.js",
-    "dev": "webpack serve --config webpack.dev.js"
+    "build": "node scripts/version-bump.js && webpack --progress --config webpack.prod.js",
+    "dev": "webpack serve --config webpack.dev.js",
+    "version-bump": "node scripts/version-bump.js"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
