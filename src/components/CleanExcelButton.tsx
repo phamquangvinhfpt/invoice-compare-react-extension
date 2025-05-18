@@ -34,7 +34,13 @@ const CleanExcelButton: React.FC<CleanExcelButtonProps> = ({
 
   const handleClick = async () => {
     if (!file1Workbook || !file2Workbook) {
-      alert('Vui lòng chọn cả hai file Excel trước khi xuất');
+      showNotification(
+        {
+          message: 'Vui lòng tải lên cả hai file Excel trước khi tạo file mới.',
+          type: 'error',
+          duration: 3000
+        }
+      );
       return;
     }
 
