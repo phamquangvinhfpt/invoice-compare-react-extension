@@ -209,12 +209,6 @@ export const highlightProblemRowsClean = (
 ): void => {
   const worksheet = workbook.worksheets[worksheetIndex];
   
-  console.log('=== HIGHLIGHT CLEAN DEBUG INFO ===');
-  console.log('Worksheet:', worksheet.name);
-  console.log('Missing rows:', missingRows);
-  console.log('Mismatch rows:', mismatchRows);
-  console.log('Duplicated rows:', duplicatedRows);
-  
   // Xử lý hàng thiếu
   if (missingRows && missingRows.length > 0) {
     console.log(`Highlight ${missingRows.length} hàng thiếu với màu đỏ`);
@@ -396,16 +390,6 @@ export const createAndDownloadCleanZip = async (
     }
     
     const zip = new JSZip();
-    
-    // Log debugging info
-    console.log('File 1:', file1Name);
-    console.log('File 2:', file2Name);
-    console.log('Missing in File 1:', missingInFile1.length, 'rows');
-    console.log('Missing in File 2:', missingInFile2.length, 'rows');
-    console.log('Mismatched MST in File 1:', mismatchedRowsFile1.length, 'rows');
-    console.log('Mismatched MST in File 2:', mismatchedRowsFile2.length, 'rows');
-    console.log('Duplicated in File 1:', duplicatedRowsFile1.length, 'rows');
-    console.log('Duplicated in File 2:', duplicatedRowsFile2.length, 'rows');
     
     // Tạo workbook mới từ đầu cho file 1
     console.log('Creating clean workbook for File 1...');

@@ -66,19 +66,39 @@ export const extractInvoiceData = (
     }
     
     processedCount++;
-    
-    // Xử lý số hóa đơn (giữ nguyên giá trị gốc để hiển thị)
+      // Xử lý số hóa đơn (giữ nguyên giá trị gốc để hiển thị)
     let invoiceNumber = row[invoiceCol];
     let normalizedInvoice = String(invoiceNumber);
+    
+    // Danh sách các công ty cần bỏ qua
+    const removeCompanyName = ['CẢNG VỤ ĐƯỜNG THUỶ NỘI ĐỊA TP.HCM'];
+    
+    // Lấy tên người bán và mã số thuế
+    const seller = row[sellerCol] || '';
+    const taxCode = row[taxCodeCol] || '';
+    
+    // Kiểm tra xem tên người bán có thuộc danh sách cần bỏ qua không
+    if (removeCompanyName.some(name => seller.toUpperCase().includes(name))) {
+      console.log(`Bỏ qua hóa đơn từ công ty: ${seller}`);
+      continue;
+    }
+    
+    // Kiểm tra độ dài số hóa đơn (bỏ qua nếu > 8 ký tự)
+    if (normalizedInvoice.length > 8) {
+      console.log(`Bỏ qua hóa đơn có số dài: ${normalizedInvoice}`);
+      continue;
+    }
+    
+    // Kiểm tra mã số thuế trống
+    if (!taxCode || taxCode.trim() === '') {
+      console.log(`Bỏ qua hóa đơn thiếu mã số thuế: ${normalizedInvoice}`);
+      continue;
+    }
     
     // Loại bỏ số 0 đằng trước cho mục đích so sánh nếu là số
     if (/^\d+$/.test(normalizedInvoice)) {
       normalizedInvoice = normalizedInvoice.replace(/^0+/, '');
     }
-    
-    // Lấy tên người bán và mã số thuế
-    const seller = row[sellerCol] || '';
-    const taxCode = row[taxCodeCol] || '';
     
     // Tạo một đối tượng InvoiceItem mới
     const invoiceItem: InvoiceItem = {
@@ -163,9 +183,8 @@ export const findDuplicateInvoices = (
     
     occurrences[signature].push(invoice);
   });
-  
-  // Kiểm tra các hóa đơn xuất hiện nhiều lần
-  Object.entries(occurrences).forEach(([signature, items]) => {
+    // Kiểm tra các hóa đơn xuất hiện nhiều lần
+  Object.entries(occurrences).forEach(([_signature, items]) => {
     // Nếu có nhiều hơn 1 bản ghi giống hệt nhau
     if (items.length > 1 && items.every(item => isNumber(item.invoiceOriginal))) {
       // Thêm vào danh sách trùng lặp
@@ -271,7 +290,6 @@ export const compareInvoiceData = (
   const missingInFile1 = file2Keys
     .filter(key => !file1Keys.includes(key) && isNumber(file2Invoices[key][0].invoiceOriginal))
     .flatMap(key => file2Invoices[key]);
-
   // Tìm các hóa đơn có số giống nhau nhưng mã số thuế khác nhau
   const mismatchedSellers: MismatchedSellerItem[] = [];
   
@@ -281,13 +299,28 @@ export const compareInvoiceData = (
       const file2Items = file2Invoices[key];
       
       // Kiểm tra xem có sự khác biệt về mã số thuế không
-      const hasMismatch = file1Items.some(f1Item => 
-        file2Items.some(f2Item => 
-          normalizeTaxCode(f1Item.taxCode) !== normalizeTaxCode(f2Item.taxCode)
-        )
+      const hasTaxCodeMismatch = file1Items.some(f1Item => 
+        file2Items.some(f2Item => {
+          const normalizedTaxCode1 = normalizeTaxCode(f1Item.taxCode);
+          const normalizedTaxCode2 = normalizeTaxCode(f2Item.taxCode);
+          return normalizedTaxCode1 !== normalizedTaxCode2 && 
+                 normalizedTaxCode1.trim() !== '' && 
+                 normalizedTaxCode2.trim() !== '';
+        })
       );
       
-      if (hasMismatch) {
+      // Debug log
+      if (hasTaxCodeMismatch) {
+        console.log(`=== Phát hiện hóa đơn #${key} có mã số thuế không khớp ===`);
+        file1Items.forEach(item => {
+          console.log(`File1 [${item.position}]: "${item.taxCode}" → "${normalizeTaxCode(item.taxCode)}"`);
+        });
+        file2Items.forEach(item => {
+          console.log(`File2 [${item.position}]: "${item.taxCode}" → "${normalizeTaxCode(item.taxCode)}"`);
+        });
+      }
+      
+      if (hasTaxCodeMismatch) {
         mismatchedSellers.push({
           key: key,
           file1: file1Items,
