@@ -39,8 +39,8 @@ jobs:
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
           
           # Commit thay đổi phiên bản
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.email "vinhpq.official@gmail.com"
+          git config --local user.name "Phạm Quang Vinh"
           git add package.json public/manifest.json src/version.json
           git commit -m "Bump version to $NEW_VERSION [skip ci]"
       

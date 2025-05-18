@@ -50,7 +50,7 @@ Nếu GitHub Actions không tạo được release:
 ## Quy trình phát triển
 
 1. Phát triển tính năng hoặc sửa lỗi trên branch riêng
-2. Tạo Pull Request để merge vào `main`
+2. Tạo Pull Request để merge vào `master`
 3. Sau khi merge, GitHub Actions sẽ tự động:
    - Tăng phiên bản
    - Tạo release mới

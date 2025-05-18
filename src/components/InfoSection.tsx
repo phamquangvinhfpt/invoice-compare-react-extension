@@ -87,7 +87,7 @@ const InfoSection: React.FC = () => {
       </div>
 
       <div className="text-center pb-4 text-xs text-gray-500">
-        © 2025 So Sánh Hóa Đơn Excel | Phiên bản {version}
+        © 2025 Excel Compare Invoice Extension | Phiên bản {version} | author: <a href="https://www.facebook.com/PhamQuangVinh2002" style={{ color: '#3b82f6', textDecoration: 'none' }} target="_blank" rel="noopener noreferrer">Quang Vinh</a> | Make for <a href="https://www.facebook.com/may18102002" style={{ color: '#3b82f6', textDecoration: 'none' }} target="_blank" rel="noopener noreferrer">Mây Đặng</a> ❤️
       </div>
     </>
   );
