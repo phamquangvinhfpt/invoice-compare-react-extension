@@ -41,8 +41,36 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
       }, {})
   ).length;
   
-  const totalDifferences = totalMismatches + duplicatedItemsCount;
+  // Đếm số lượng MST khác nhau thực sự (có MST khác biệt)
+  const actualMismatchedCount = results.mismatchedSellers.filter(item => {
+    // Lấy tất cả mã số thuế từ file 1 và file 2
+    const file1TaxCodes = item.file1.map(f => f.taxCode).filter(Boolean);
+    const file2TaxCodes = item.file2.map(f => f.taxCode).filter(Boolean);
+    
+    // Tính toán các mã số thuế khác biệt để hiển thị
+    let taxCodesToShowInFile1 = file1TaxCodes;
+    let taxCodesToShowInFile2 = file2TaxCodes;
+    
+    if (file1TaxCodes.length > 1) {
+      taxCodesToShowInFile1 = file1TaxCodes.filter(taxCode => !file2TaxCodes.includes(taxCode));
+    }
+    
+    if (file2TaxCodes.length > 1) {
+      taxCodesToShowInFile2 = file2TaxCodes.filter(taxCode => !file1TaxCodes.includes(taxCode));
+    }
+    
+    // Chỉ đếm các mục có ít nhất một mã số thuế khác biệt để hiển thị
+    return taxCodesToShowInFile1.length > 0 || taxCodesToShowInFile2.length > 0;
+  }).length;
+  
+  const totalDifferences = results.missingInFile1.length + 
+                          results.missingInFile2.length + 
+                          actualMismatchedCount + 
+                          duplicatedItemsCount;
 
+  // Dùng mảng này để theo dõi các item đã được render để hiển thị thứ tự chính xác
+  const visibleMismatchIndices: number[] = [];
+  
   // Thành phần hiển thị các hóa đơn thiếu
   const renderMissingInvoice = (item: InvoiceItem, index: number) => (
     <div key={index} className="p-3 mb-2 bg-white border border-gray-200 rounded-md shadow-sm">
@@ -53,7 +81,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
   );
 
   // Thành phần hiển thị các hóa đơn không khớp người bán
-  const renderMismatchedSeller = (item: MismatchedSellerItem, index: number) => {
+  const renderMismatchedSeller = (item: MismatchedSellerItem, index: number, visibleIndex: number) => {
     // Kiểm tra xem có data từ cả hai file không
     if (!item.file1 || !item.file1.length || !item.file2 || !item.file2.length) {
       return null;
@@ -78,11 +106,16 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
       taxCodesToShowInFile2 = file2TaxCodes.filter(taxCode => !file1TaxCodes.includes(taxCode));
     }
     
+    // Nếu không có mã số thuế nào khác biệt để hiển thị ở cả hai file, trả về null
+    if (taxCodesToShowInFile1.length === 0 && taxCodesToShowInFile2.length === 0) {
+      return null;
+    }
+    
     return (
       <div key={index} className="p-4 mb-3 bg-white border border-l-4 border-l-yellow-500 rounded-md shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between mb-2">
           <p className="font-semibold text-gray-800">Số hóa đơn: {item.key}</p>
-          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600">{index + 1}/{results.mismatchedSellers.length}</span>
+          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600">{visibleIndex + 1}/{actualMismatchedCount}</span>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -166,11 +199,11 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
               className={`px-4 py-3 text-sm font-medium ${activeTab === 'mismatched' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'}`}
               onClick={() => setActiveTab('mismatched')}
             >
-              {results.mismatchedSellers.length > 0 ? (
+              {actualMismatchedCount > 0 ? (
                 <>
                   Người Bán Không Khớp
                   <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                    {results.mismatchedSellers.length}
+                    {actualMismatchedCount}
                   </span>
                 </>
               ) : (
@@ -212,10 +245,50 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
                 file2Name={file2Name}
                 missingInFile1={results.missingInFile1.map(item => item.row)}
                 missingInFile2={results.missingInFile2.map(item => item.row)}
-                mismatchedRowsFile1={results.mismatchedSellers.flatMap(item => 
-                  item.file1 && Array.isArray(item.file1) ? item.file1.map(f => f.row) : [])}
-                mismatchedRowsFile2={results.mismatchedSellers.flatMap(item => 
-                  item.file2 && Array.isArray(item.file2) ? item.file2.map(f => f.row) : [])}
+                mismatchedRowsFile1={results.mismatchedSellers
+                  .filter(item => {
+                    // Lấy tất cả mã số thuế từ file 1 và file 2
+                    const file1TaxCodes = item.file1.map(f => f.taxCode).filter(Boolean);
+                    const file2TaxCodes = item.file2.map(f => f.taxCode).filter(Boolean);
+                    
+                    // Tính toán các mã số thuế khác biệt để hiển thị
+                    let taxCodesToShowInFile1 = file1TaxCodes;
+                    let taxCodesToShowInFile2 = file2TaxCodes;
+                    
+                    if (file1TaxCodes.length > 1) {
+                      taxCodesToShowInFile1 = file1TaxCodes.filter(taxCode => !file2TaxCodes.includes(taxCode));
+                    }
+                    
+                    if (file2TaxCodes.length > 1) {
+                      taxCodesToShowInFile2 = file2TaxCodes.filter(taxCode => !file1TaxCodes.includes(taxCode));
+                    }
+                    
+                    // Chỉ giữ lại các mục có ít nhất một mã số thuế khác biệt để hiển thị
+                    return taxCodesToShowInFile1.length > 0 || taxCodesToShowInFile2.length > 0;
+                  })
+                  .flatMap(item => item.file1 && Array.isArray(item.file1) ? item.file1.map(f => f.row) : [])}
+                mismatchedRowsFile2={results.mismatchedSellers
+                  .filter(item => {
+                    // Lấy tất cả mã số thuế từ file 1 và file 2
+                    const file1TaxCodes = item.file1.map(f => f.taxCode).filter(Boolean);
+                    const file2TaxCodes = item.file2.map(f => f.taxCode).filter(Boolean);
+                    
+                    // Tính toán các mã số thuế khác biệt để hiển thị
+                    let taxCodesToShowInFile1 = file1TaxCodes;
+                    let taxCodesToShowInFile2 = file2TaxCodes;
+                    
+                    if (file1TaxCodes.length > 1) {
+                      taxCodesToShowInFile1 = file1TaxCodes.filter(taxCode => !file2TaxCodes.includes(taxCode));
+                    }
+                    
+                    if (file2TaxCodes.length > 1) {
+                      taxCodesToShowInFile2 = file2TaxCodes.filter(taxCode => !file1TaxCodes.includes(taxCode));
+                    }
+                    
+                    // Chỉ giữ lại các mục có ít nhất một mã số thuế khác biệt để hiển thị
+                    return taxCodesToShowInFile1.length > 0 || taxCodesToShowInFile2.length > 0;
+                  })
+                  .flatMap(item => item.file2 && Array.isArray(item.file2) ? item.file2.map(f => f.row) : [])}
                 duplicatedRowsFile1={results.duplicatedItems
                   .filter(item => item.file1 !== null)
                   .map(item => item.file1!.row)}
@@ -275,25 +348,40 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
         {activeTab === 'mismatched' && (
           <div className="tab-content p-4">
             <div className="max-h-96 overflow-y-auto w-full">
-              {results.mismatchedSellers.length > 0 ? (
+              {actualMismatchedCount > 0 ? (
                 <>
                   <div className="bg-yellow-50 p-4 mb-4 rounded-lg border border-yellow-200 text-yellow-800">
                     <div className="flex items-center mb-2">
                       <svg className="h-5 w-5 text-yellow-600 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                       </svg>
-                      <h3 className="font-semibold text-yellow-800">Phát hiện {results.mismatchedSellers.length} hóa đơn có người bán không khớp</h3>
+                      <h3 className="font-semibold text-yellow-800">Phát hiện {actualMismatchedCount} hóa đơn có người bán không khớp</h3>
                     </div>
                     <p className="text-sm">Danh sách dưới đây hiển thị các hóa đơn có cùng số nhưng người bán khác nhau giữa hai file.</p>
                   </div>
                   
-                  {results.mismatchedSellers.map((item, index) => renderMismatchedSeller(item, index))}
+                  {/* Dùng biến để đếm số lượng hiển thị */}
+                  {(() => {
+                    let visibleCount = 0;
+                    return results.mismatchedSellers.map((item, index) => {
+                      const renderedItem = renderMismatchedSeller(item, index, visibleCount);
+                      if (renderedItem) {
+                        visibleCount++;
+                        return (
+                          <div key={index} className="relative">
+                            {renderedItem}
+                          </div>
+                        );
+                      }
+                      return null;
+                    });
+                  })()}
                   
                   <div className="mt-3 py-3 px-4 bg-yellow-50 text-yellow-800 font-medium rounded-md text-center text-sm flex items-center justify-center">
                     <svg className="h-5 w-5 text-yellow-600 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 01-1 1H7a1 1 0 110-2h3a1 1 0 011 1z" clipRule="evenodd" />
                     </svg>
-                    <p>Tổng số: {results.mismatchedSellers.length} hóa đơn có người bán không khớp</p>
+                    <p>Tổng số: {actualMismatchedCount} hóa đơn có người bán không khớp</p>
                   </div>
                 </>
               ) : (
