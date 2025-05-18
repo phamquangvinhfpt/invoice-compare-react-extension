@@ -2,9 +2,9 @@
 
 ## Quy trình tự động hóa với GitHub Actions
 
-Repository này đã được cấu hình để tự động build và release extension khi có commit mới được đẩy lên branch `main`. Quy trình hoạt động như sau:
+Repository này đã được cấu hình để tự động build và release extension khi có commit mới được đẩy lên branch `master`. Quy trình hoạt động như sau:
 
-1. Khi có commit mới vào branch `main`, GitHub Actions sẽ tự động kích hoạt.
+1. Khi có commit mới vào branch `master`, GitHub Actions sẽ tự động kích hoạt.
 2. Workflow sẽ:
    - Tăng phiên bản trong `package.json` và `manifest.json` tự động
    - Build extension

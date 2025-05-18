@@ -1,11 +1,12 @@
-name: Build and Release Extension
+name: Manual Build and Release
 
 on:
-  push:
-    branches:
-      - master
-    paths-ignore:
-      - '**.md'
+  workflow_dispatch:
+    inputs:
+      release_notes:
+        description: 'Mô tả về bản cập nhật này'
+        required: false
+        default: 'Cập nhật tính năng và sửa lỗi'
 
 jobs:
   build-and-release:
@@ -29,8 +30,8 @@ jobs:
       - name: Bump version
         id: bump-version
         run: |
-          # Chạy script tăng phiên bản
-          node ./scripts/version-bump.js "Cập nhật tính năng và sửa lỗi tự động từ commit ${GITHUB_SHA::7}"
+          # Chạy script tăng phiên bản với ghi chú từ input
+          node ./scripts/version-bump.js "${{ github.event.inputs.release_notes || 'Cập nhật tính năng và sửa lỗi' }}"
           
           # Lấy phiên bản mới từ package.json
           NEW_VERSION=$(node -p "require('./package.json').version")
@@ -72,7 +73,7 @@ jobs:
           body: |
             ## Phiên bản ${{ steps.bump-version.outputs.version }}
             
-            Cập nhật tính năng và sửa lỗi từ commit ${GITHUB_SHA::7}
+            ${{ github.event.inputs.release_notes || 'Cập nhật tính năng và sửa lỗi' }}
             
             ### Cách cài đặt:
             1. Tải file zip đính kèm
