@@ -10,6 +10,8 @@ on:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout code
@@ -37,11 +39,11 @@ jobs:
           echo "New version: $NEW_VERSION"
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
           
-          # Commit thay đổi phiên bản
+          # Commit thay đổi phiên bản - chỉ sửa đổi những file không làm thay đổi workflow
           git config --local user.email "vinhpq.official@gmail.com"
           git config --local user.name "Phạm Quang Vinh"
-          git add package.json public/manifest.json src/version.json
-          git commit -m "Bump version to $NEW_VERSION [skip ci]"
+          git add --no-all package.json public/manifest.json src/version.json
+          git diff-index --quiet HEAD || git commit -m "Bump version to $NEW_VERSION [skip ci]"
       
       - name: Build extension
         run: npm run build
