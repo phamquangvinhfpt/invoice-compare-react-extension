@@ -40,38 +40,13 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
         return acc;
       }, {})
   ).length;
-  
-  // Đếm số lượng MST khác nhau thực sự (có MST khác biệt)
-  const actualMismatchedCount = results.mismatchedSellers.filter(item => {
-    // Lấy tất cả mã số thuế từ file 1 và file 2
-    const file1TaxCodes = item.file1.map(f => f.taxCode).filter(Boolean);
-    const file2TaxCodes = item.file2.map(f => f.taxCode).filter(Boolean);
-    
-    // Tính toán các mã số thuế khác biệt để hiển thị
-    let taxCodesToShowInFile1 = file1TaxCodes;
-    let taxCodesToShowInFile2 = file2TaxCodes;
-    
-    if (file1TaxCodes.length > 1) {
-      taxCodesToShowInFile1 = file1TaxCodes.filter(taxCode => !file2TaxCodes.includes(taxCode));
-    }
-    
-    if (file2TaxCodes.length > 1) {
-      taxCodesToShowInFile2 = file2TaxCodes.filter(taxCode => !file1TaxCodes.includes(taxCode));
-    }
-    
-    // Chỉ đếm các mục có ít nhất một mã số thuế khác biệt để hiển thị
-    return taxCodesToShowInFile1.length > 0 || taxCodesToShowInFile2.length > 0;
-  }).length;
+    // Đếm số lượng MST khác nhau thực sự (không cần lọc vì đã được lọc ở App.tsx)
+  const actualMismatchedCount = results.mismatchedSellers.length;
   
   const totalDifferences = results.missingInFile1.length + 
                           results.missingInFile2.length + 
                           actualMismatchedCount + 
-                          duplicatedItemsCount;
-
-  // Dùng mảng này để theo dõi các item đã được render để hiển thị thứ tự chính xác
-  const visibleMismatchIndices: number[] = [];
-  
-  // Thành phần hiển thị các hóa đơn thiếu
+                          duplicatedItemsCount;  // Thành phần hiển thị các hóa đơn thiếu
   const renderMissingInvoice = (item: InvoiceItem, index: number) => (
     <div key={index} className="p-3 mb-2 bg-white border border-gray-200 rounded-md shadow-sm">
       <p className="font-semibold text-gray-800">Số hóa đơn: {item.invoiceOriginal}</p>
@@ -79,35 +54,10 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
       <p className="text-gray-500 text-xs mt-1">Dòng: {item.position}</p>
     </div>
   );
-
   // Thành phần hiển thị các hóa đơn không khớp người bán
   const renderMismatchedSeller = (item: MismatchedSellerItem, index: number, visibleIndex: number) => {
     // Kiểm tra xem có data từ cả hai file không
-    if (!item.file1 || !item.file1.length || !item.file2 || !item.file2.length) {
-      return null;
-    }
-    
-    // Lấy tất cả mã số thuế từ file 1
-    const file1TaxCodes = item.file1.map(f => f.taxCode).filter(Boolean);
-    
-    // Lấy tất cả mã số thuế từ file 2
-    const file2TaxCodes = item.file2.map(f => f.taxCode).filter(Boolean);
-    
-    // Loại bỏ các mã trùng nhau chỉ khi file có nhiều hơn 1 mã MST
-    let taxCodesToShowInFile1 = file1TaxCodes;
-    let taxCodesToShowInFile2 = file2TaxCodes;
-    
-    // Chỉ lọc bỏ các mã trùng nếu file đó có nhiều hơn 1 mã
-    if (file1TaxCodes.length > 1) {
-      taxCodesToShowInFile1 = file1TaxCodes.filter(taxCode => !file2TaxCodes.includes(taxCode));
-    }
-    
-    if (file2TaxCodes.length > 1) {
-      taxCodesToShowInFile2 = file2TaxCodes.filter(taxCode => !file1TaxCodes.includes(taxCode));
-    }
-    
-    // Nếu không có mã số thuế nào khác biệt để hiển thị ở cả hai file, trả về null
-    if (taxCodesToShowInFile1.length === 0 && taxCodesToShowInFile2.length === 0) {
+    if ((!item.file1 || !item.file1.length) && (!item.file2 || !item.file2.length)) {
       return null;
     }
     
@@ -127,23 +77,22 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
               <p className="text-xs font-medium text-blue-600">File 1:</p>
             </div>
             
-            {/* Hiển thị mục từ file 1 theo điều kiện lọc */}
-            {item.file1.filter(f1Item => taxCodesToShowInFile1.includes(f1Item.taxCode)).map((f1Item, idx) => (
-              <div key={`f1-${idx}`} className="mb-2">
-                <p className="bg-yellow-50 py-2 px-3 rounded text-sm border border-yellow-100">
-                  <span className="text-xs text-gray-500 block mb-1">Dòng {f1Item.position}</span>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{f1Item.seller}</span>
-                    <span className="text-xs text-gray-600 mt-1">MST: {f1Item.taxCode}</span>
-                  </div>
-                </p>
-              </div>
-            ))}
-            
-            {/* Hiển thị thông báo nếu không có MST để hiển thị */}
-            {taxCodesToShowInFile1.length === 0 && (
+            {/* Hiển thị tất cả mục từ file 1 không cần lọc */}
+            {item.file1 && item.file1.length > 0 ? (
+              item.file1.map((f1Item, idx) => (
+                <div key={`f1-${idx}`} className="mb-2">
+                  <p className="bg-yellow-50 py-2 px-3 rounded text-sm border border-yellow-100">
+                    <span className="text-xs text-gray-500 block mb-1">Dòng {f1Item.position}</span>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{f1Item.seller}</span>
+                      <span className="text-xs text-gray-600 mt-1">MST: {f1Item.taxCode}</span>
+                    </div>
+                  </p>
+                </div>
+              ))
+            ) : (
               <div className="text-center text-sm text-gray-500 py-3">
-                Không có mã số thuế khác biệt để hiển thị
+                Không có dữ liệu
               </div>
             )}
           </div>
@@ -156,23 +105,22 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
               <p className="text-xs font-medium text-green-600">File 2:</p>
             </div>
             
-            {/* Hiển thị thông tin doanh nghiệp theo điều kiện lọc */}
-            {item.file2.filter(f2Item => taxCodesToShowInFile2.includes(f2Item.taxCode)).map((f2Item, idx) => (
-              <div key={`f2-${idx}`} className="mb-2">
-                <p className="bg-yellow-50 py-2 px-3 rounded text-sm border border-yellow-100">
-                  <span className="text-xs text-gray-500 block mb-1">Dòng {f2Item.position}</span>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{f2Item.seller}</span>
-                    <span className="text-xs text-gray-600 mt-1">MST: {f2Item.taxCode}</span>
-                  </div>
-                </p>
-              </div>
-            ))}
-            
-            {/* Hiển thị thông báo nếu không có MST để hiển thị */}
-            {taxCodesToShowInFile2.length === 0 && (
+            {/* Hiển thị tất cả mục từ file 2 không cần lọc */}
+            {item.file2 && item.file2.length > 0 ? (
+              item.file2.map((f2Item, idx) => (
+                <div key={`f2-${idx}`} className="mb-2">
+                  <p className="bg-yellow-50 py-2 px-3 rounded text-sm border border-yellow-100">
+                    <span className="text-xs text-gray-500 block mb-1">Dòng {f2Item.position}</span>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{f2Item.seller}</span>
+                      <span className="text-xs text-gray-600 mt-1">MST: {f2Item.taxCode}</span>
+                    </div>
+                  </p>
+                </div>
+              ))
+            ) : (
               <div className="text-center text-sm text-gray-500 py-3">
-                Không có mã số thuế khác biệt để hiển thị
+                Không có dữ liệu
               </div>
             )}
           </div>
@@ -244,51 +192,12 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
                 file1Name={file1Name}
                 file2Name={file2Name}
                 missingInFile1={results.missingInFile1.map(item => item.row)}
-                missingInFile2={results.missingInFile2.map(item => item.row)}
-                mismatchedRowsFile1={results.mismatchedSellers
-                  .filter(item => {
-                    // Lấy tất cả mã số thuế từ file 1 và file 2
-                    const file1TaxCodes = item.file1.map(f => f.taxCode).filter(Boolean);
-                    const file2TaxCodes = item.file2.map(f => f.taxCode).filter(Boolean);
-                    
-                    // Tính toán các mã số thuế khác biệt để hiển thị
-                    let taxCodesToShowInFile1 = file1TaxCodes;
-                    let taxCodesToShowInFile2 = file2TaxCodes;
-                    
-                    if (file1TaxCodes.length > 1) {
-                      taxCodesToShowInFile1 = file1TaxCodes.filter(taxCode => !file2TaxCodes.includes(taxCode));
-                    }
-                    
-                    if (file2TaxCodes.length > 1) {
-                      taxCodesToShowInFile2 = file2TaxCodes.filter(taxCode => !file1TaxCodes.includes(taxCode));
-                    }
-                    
-                    // Chỉ giữ lại các mục có ít nhất một mã số thuế khác biệt để hiển thị
-                    return taxCodesToShowInFile1.length > 0 || taxCodesToShowInFile2.length > 0;
-                  })
-                  .flatMap(item => item.file1 && Array.isArray(item.file1) ? item.file1.map(f => f.row) : [])}
+                missingInFile2={results.missingInFile2.map(item => item.row)}                mismatchedRowsFile1={results.mismatchedSellers
+                  .filter(item => item && item.file1 && Array.isArray(item.file1))
+                  .flatMap(item => item.file1.map(inv => inv.row))}
                 mismatchedRowsFile2={results.mismatchedSellers
-                  .filter(item => {
-                    // Lấy tất cả mã số thuế từ file 1 và file 2
-                    const file1TaxCodes = item.file1.map(f => f.taxCode).filter(Boolean);
-                    const file2TaxCodes = item.file2.map(f => f.taxCode).filter(Boolean);
-                    
-                    // Tính toán các mã số thuế khác biệt để hiển thị
-                    let taxCodesToShowInFile1 = file1TaxCodes;
-                    let taxCodesToShowInFile2 = file2TaxCodes;
-                    
-                    if (file1TaxCodes.length > 1) {
-                      taxCodesToShowInFile1 = file1TaxCodes.filter(taxCode => !file2TaxCodes.includes(taxCode));
-                    }
-                    
-                    if (file2TaxCodes.length > 1) {
-                      taxCodesToShowInFile2 = file2TaxCodes.filter(taxCode => !file1TaxCodes.includes(taxCode));
-                    }
-                    
-                    // Chỉ giữ lại các mục có ít nhất một mã số thuế khác biệt để hiển thị
-                    return taxCodesToShowInFile1.length > 0 || taxCodesToShowInFile2.length > 0;
-                  })
-                  .flatMap(item => item.file2 && Array.isArray(item.file2) ? item.file2.map(f => f.row) : [])}
+                  .filter(item => item && item.file2 && Array.isArray(item.file2))
+                  .flatMap(item => item.file2.map(inv => inv.row))}
                 duplicatedRowsFile1={results.duplicatedItems
                   .filter(item => item.file1 !== null)
                   .map(item => item.file1!.row)}
@@ -359,8 +268,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
                     </div>
                     <p className="text-sm">Danh sách dưới đây hiển thị các hóa đơn có cùng số nhưng người bán khác nhau giữa hai file.</p>
                   </div>
-                  
-                  {/* Dùng biến để đếm số lượng hiển thị */}
+                    {/* Dùng biến để đếm số lượng hiển thị */}
                   {(() => {
                     let visibleCount = 0;
                     return results.mismatchedSellers.map((item, index) => {

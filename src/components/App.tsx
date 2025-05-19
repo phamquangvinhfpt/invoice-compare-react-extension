@@ -167,47 +167,51 @@ const App: React.FC = () => {
       );
       // Loại bỏ các mã trùng nhau chỉ khi file có nhiều hơn 1 mã MST, Chỉ lọc bỏ các mã trùng nếu file đó có nhiều hơn 1 mã vd: file1 có 3 mã MST, file2 có 2 mã MST mà trong đó 2 mã MST của file1 trùng với 2 mã MST của file2 vừa trùng mst lại trùng số hóa đơn thì loại bỏ khỏi file1
       const filteredMismatchedSellers = results.mismatchedSellers.map((item: any) => {
-  const file1 = item.file1;
-  const file2 = item.file2;
+        const file1 = item.file1;
+        const file2 = item.file2;
 
-  if (!file1 || !file2) {
-    return item; // Giữ nguyên nếu không có file1 hoặc file2
-  }
+        if (!file1 || !file2) {
+          return item; // Giữ nguyên nếu không có file1 hoặc file2
+        }
 
-  // Lọc file1 để loại bỏ các hóa đơn vừa trùng số vừa trùng MST với file2
-  const filteredFile1 = file1.filter((inv1: any) => {
-      // Kiểm tra xem hóa đơn có trùng số với bất kỳ hóa đơn nào trong file2 không
-      const hasMatchingInvoice = file2.some((inv2: any) => 
-        String(inv1.invoiceOriginal).replace(/^0+/, '') === String(inv2.invoiceOriginal).replace(/^0+/, '')
-      );
-      
-      // Kiểm tra xem hóa đơn có trùng MST với bất kỳ hóa đơn nào trong file2 không
-      const hasMatchingTaxCode = file2.some((inv2: any) => 
-        inv1.taxCode === inv2.taxCode
-      );
-      
-      // Giữ lại hóa đơn nếu: không trùng số, hoặc trùng số nhưng khác MST
-      return !hasMatchingInvoice || (hasMatchingInvoice && !hasMatchingTaxCode);
-    });
+        // Lọc file1 để loại bỏ các hóa đơn vừa trùng số vừa trùng MST với file2
+        const filteredFile1 = file1.filter((inv1: any) => {
+            // Kiểm tra xem hóa đơn có trùng số với bất kỳ hóa đơn nào trong file2 không
+            const hasMatchingInvoice = file2.some((inv2: any) => 
+              String(inv1.invoiceOriginal).replace(/^0+/, '') === String(inv2.invoiceOriginal).replace(/^0+/, '') && inv1.taxCode === inv2.taxCode
+            );
+            
+            // Giữ lại hóa đơn nếu: không trùng số, hoặc trùng số nhưng khác MST
 
-    // Tương tự cho file2 nếu cần
-    const filteredFile2 = file2; // Hoặc xử lý tương tự như file1
+            return !hasMatchingInvoice;
+          });
 
-    return {
-      ...item,
-      file1: filteredFile1,
-      file2: filteredFile2
-    };
-  }).filter((item: any) => {
-    // Loại bỏ các mục không còn hóa đơn nào sau khi lọc
-    return (item.file1 && item.file1.length > 0) || (item.file2 && item.file2.length > 0);
-  });
+          // Tương tự cho file2 nếu cần
+          const filteredFile2 = file2.filter((inv2: any) => {
+            // Kiểm tra xem hóa đơn có trùng số với bất kỳ hóa đơn nào trong file1 không
+            const hasMatchingInvoice = file1.some((inv1: any) => 
+              String(inv2.invoiceOriginal).replace(/^0+/, '') === String(inv1.invoiceOriginal).replace(/^0+/, '') && inv2.taxCode === inv1.taxCode
+            );
+            
+            // Giữ lại hóa đơn nếu: không trùng số, hoặc trùng số nhưng khác MST
+            return !hasMatchingInvoice;
+          });
 
-  const filteredResults = {
-    ...results,
-    mismatchedSellers: filteredMismatchedSellers
-  };
-      // console.log('Kết quả so sánh:', filteredResults.mismatchedSellers);
+        return {
+          ...item,
+          file1: filteredFile1,
+          file2: filteredFile2
+        };
+      }).filter((item: any) => {
+        // Loại bỏ các mục không còn hóa đơn nào sau khi lọc
+        return (item.file1 && item.file1.length > 0) || (item.file2 && item.file2.length > 0);
+      });
+
+      const filteredResults = {
+        ...results,
+        mismatchedSellers: filteredMismatchedSellers
+      };
+      console.log('Kết quả so sánh:', filteredResults.mismatchedSellers);
       setComparisonResults(filteredResults);
       setShowResults(true);
       
