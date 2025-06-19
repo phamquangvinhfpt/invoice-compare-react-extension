@@ -66,16 +66,17 @@ export const extractInvoiceData = (
     }
     
     processedCount++;
-      // Xử lý số hóa đơn (giữ nguyên giá trị gốc để hiển thị)
-    let invoiceNumber = row[invoiceCol];
-    let normalizedInvoice = String(invoiceNumber);
+    
+    // Xử lý số hóa đơn - loại bỏ tất cả số 0 đầu
+    let invoiceNumber = String(row[invoiceCol]);
+    let normalizedInvoice = invoiceNumber.replace(/^0+/, '') || '0'; // Nếu toàn số 0 thì giữ lại 1 số 0
     
     // Danh sách các công ty cần bỏ qua
     const removeCompanyName = ['CẢNG VỤ ĐƯỜNG THUỶ NỘI ĐỊA TP.HCM'];
     
     // Lấy tên người bán và mã số thuế
     const seller = row[sellerCol] || '';
-    const taxCode = row[taxCodeCol] || '';
+    let taxCode = row[taxCodeCol] || '';
     
     // Kiểm tra xem tên người bán có thuộc danh sách cần bỏ qua không
     if (removeCompanyName.some(name => seller.toUpperCase().includes(name))) {
@@ -83,27 +84,29 @@ export const extractInvoiceData = (
       continue;
     }
     
-    // Kiểm tra độ dài số hóa đơn (bỏ qua nếu > 8 ký tự)
+    // Kiểm tra độ dài số hóa đơn sau khi chuẩn hóa (bỏ qua nếu > 8 ký tự)
     if (normalizedInvoice.length > 8) {
       console.log(`Bỏ qua hóa đơn có số dài: ${normalizedInvoice}`);
       continue;
     }
     
     // Kiểm tra mã số thuế trống
-    if (!taxCode || taxCode.trim() === '') {
+    if (!taxCode || String(taxCode).trim() === '') {
       console.log(`Bỏ qua hóa đơn thiếu mã số thuế: ${normalizedInvoice}`);
       continue;
     }
-    
-    // Loại bỏ số 0 đằng trước cho mục đích so sánh nếu là số
-    if (/^\d+$/.test(normalizedInvoice)) {
-      normalizedInvoice = normalizedInvoice.replace(/^0+/, '');
+
+    // Xử lý đầu vào mst nếu có dấu ' vd: '0107500414 thì cắt dấu đó đi đồng thời cũng cắt đầu 0 ra luôn
+    if (typeof taxCode === 'string' && taxCode.includes("'")) {
+      taxCode = taxCode.split("'")[0].replace(/^0+/, '');
+    } else if (typeof taxCode === 'number') {
+      taxCode = String(taxCode).replace(/^0+/, '');
     }
     
     // Tạo một đối tượng InvoiceItem mới
     const invoiceItem: InvoiceItem = {
       row: i,
-      invoiceOriginal: String(invoiceNumber), // Giữ dạng gốc cho hiển thị
+      invoiceOriginal: normalizedInvoice, // Sử dụng số đã loại bỏ số 0 đầu
       seller: seller,
       taxCode: taxCode,
       position: row[0] || (i + 1) // Lưu lại vị trí của hàng trong file, mặc định là số thứ tự dòng

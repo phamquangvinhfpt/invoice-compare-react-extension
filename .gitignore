@@ -41,3 +41,6 @@ sketch
 /.vscode
 /.vscode/settings.json
 /dist
+
+# Version information generated during build
+/src/version.json

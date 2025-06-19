@@ -1,6 +1,34 @@
 // Script tự động tăng phiên bản trong package.json và manifest.json
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
+
+// Kiểm tra xem commit hiện tại có phải là commit tăng phiên bản không
+function isVersionBumpCommit() {
+  try {
+    // Lấy commit message gần nhất
+    const lastCommitMessage = execSync('git log -1 --pretty=%B').toString().trim();
+    return lastCommitMessage.includes('Bump version to') && lastCommitMessage.includes('[skip ci]');
+  } catch (error) {
+    console.error('Không thể kiểm tra commit message:', error);
+    return false;
+  }
+}
+
+// Nếu đây là commit tăng phiên bản, không tăng nữa
+if (isVersionBumpCommit()) {
+  console.log('Đây là commit tăng phiên bản, không tăng phiên bản lần nữa.');
+  
+  // Đọc package.json để in phiên bản hiện tại
+  const packagePath = path.resolve(__dirname, '../package.json');
+  const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+  console.log('Giữ nguyên phiên bản:', packageJson.version);
+  
+  // In phiên bản cho GitHub Actions
+  console.log(`::set-output name=version::${packageJson.version}`);
+  
+  process.exit(0);
+}
 
 // Đọc package.json
 const packagePath = path.resolve(__dirname, '../package.json');

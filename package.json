@@ -4,7 +4,8 @@
   "description": "So sánh số hóa đơn và thông tin người bán giữa hai file Excel sử dụng React & TypeScript",
   "scripts": {
     "start": "webpack --watch --progress --config webpack.dev.js",
-    "build": "node scripts/version-bump.js && webpack --progress --config webpack.prod.js",
+    "build": "webpack --progress --config webpack.prod.js",
+    "build:released": "node scripts/version-bump.js && webpack --progress --config webpack.prod.js",
     "dev": "webpack serve --config webpack.dev.js",
     "version-bump": "node scripts/version-bump.js"
   },

@@ -69,8 +69,17 @@ module.exports = {
     path: path.resolve('dist'),
   },
   optimization: {
+    // Disable code splitting/chunking for easier debugging
     splitChunks: {
-      chunks: 'all',
+      // Set to false to completely disable code splitting
+      chunks: 'async', // Only split async chunks (effectively keeping main bundles whole)
+      // You can set to 'all' to enable splitting, or 'false' to disable entirely
+      // Setting cacheGroups to empty prevents any splitting from webpack defaults
+      cacheGroups: { default: false }
     },
+    // Keep one runtime chunk instead of one per entry point
+    runtimeChunk: false,
+    // Minimize for production but keep readable for debugging
+    minimize: false
   },
 }

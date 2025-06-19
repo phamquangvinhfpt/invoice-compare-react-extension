@@ -12,9 +12,8 @@ import {
   workbookToArray, 
   createAndDownloadZip 
 } from '../services/excelService';
-import { 
-  extractInvoiceData, 
-  validateInput, 
+import {
+  validateInput,
   compareInvoiceData,
   ComparisonResult,
   isNumber
@@ -231,7 +230,7 @@ const App: React.FC = () => {
           }, {})
       ).length;
       
-      const totalDifferences = totalMismatches + duplicatedItemsCount;
+      // const totalDifferences = totalMismatches + duplicatedItemsCount;
       
       showNotification({
         message: `So sánh hoàn tất! Đã tìm thấy ${totalMismatches} khác biệt và ${duplicatedItemsCount} hóa đơn trùng lặp.`,
