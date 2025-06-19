@@ -4,6 +4,7 @@ export interface InvoiceItem {
   invoiceOriginal: string;
   seller: string;
   taxCode: string;  // Thêm trường mã số thuế
+  netPrice: string;
   position: any;
 }
 
@@ -46,7 +47,8 @@ export const extractInvoiceData = (
   startRow: number,
   invoiceCol: number,
   sellerCol: number,
-  taxCodeCol: number
+  taxCodeCol: number,
+  netPriceCol: number,
 ): { invoiceMap: InvoiceMap; allInvoices: InvoiceItem[] } => {
   const result: InvoiceMap = {};
   const allInvoices: InvoiceItem[] = [];
@@ -69,7 +71,13 @@ export const extractInvoiceData = (
     
     // Xử lý số hóa đơn - loại bỏ tất cả số 0 đầu
     let invoiceNumber = String(row[invoiceCol]);
-    let normalizedInvoice = invoiceNumber.replace(/^0+/, '') || '0'; // Nếu toàn số 0 thì giữ lại 1 số 0
+    if (typeof invoiceNumber === 'string' && invoiceNumber.includes("'")) {
+      invoiceNumber = invoiceNumber.split("'")[0].replace(/^0+/, '');
+    } else if (typeof invoiceNumber === 'number') {
+      invoiceNumber = String(invoiceNumber).replace(/^0+/, '');
+    } else if (typeof invoiceNumber === 'string') {
+      invoiceNumber = invoiceNumber.replace(/^0+/, '');
+    }
     
     // Danh sách các công ty cần bỏ qua
     const removeCompanyName = ['CẢNG VỤ ĐƯỜNG THUỶ NỘI ĐỊA TP.HCM'];
@@ -78,21 +86,27 @@ export const extractInvoiceData = (
     const seller = row[sellerCol] || '';
     let taxCode = row[taxCodeCol] || '';
     
+    // XỬ LÝ NET PRICE
+    let netPrice = row[netPriceCol];
+    
     // Kiểm tra xem tên người bán có thuộc danh sách cần bỏ qua không
     if (removeCompanyName.some(name => seller.toUpperCase().includes(name))) {
       console.log(`Bỏ qua hóa đơn từ công ty: ${seller}`);
       continue;
     }
+
+    // lấy 3 từ cuối của seller
+    const standardizedSeller = standardizeSeller(seller);
     
     // Kiểm tra độ dài số hóa đơn sau khi chuẩn hóa (bỏ qua nếu > 8 ký tự)
-    if (normalizedInvoice.length > 8) {
-      console.log(`Bỏ qua hóa đơn có số dài: ${normalizedInvoice}`);
+    if (invoiceNumber.length > 8) {
+      console.log(`Bỏ qua hóa đơn có số dài: ${invoiceNumber}`);
       continue;
     }
     
     // Kiểm tra mã số thuế trống
     if (!taxCode || String(taxCode).trim() === '') {
-      console.log(`Bỏ qua hóa đơn thiếu mã số thuế: ${normalizedInvoice}`);
+      console.log(`Bỏ qua hóa đơn thiếu mã số thuế: ${invoiceNumber}`);
       continue;
     }
 
@@ -101,25 +115,28 @@ export const extractInvoiceData = (
       taxCode = taxCode.split("'")[0].replace(/^0+/, '');
     } else if (typeof taxCode === 'number') {
       taxCode = String(taxCode).replace(/^0+/, '');
+    } else if (typeof taxCode === 'string') {
+      taxCode = taxCode.replace(/^0+/, '');
     }
     
     // Tạo một đối tượng InvoiceItem mới
     const invoiceItem: InvoiceItem = {
       row: i,
-      invoiceOriginal: normalizedInvoice, // Sử dụng số đã loại bỏ số 0 đầu
-      seller: seller,
+      invoiceOriginal: invoiceNumber,
+      seller: standardizedSeller,
       taxCode: taxCode,
-      position: row[0] || (i + 1) // Lưu lại vị trí của hàng trong file, mặc định là số thứ tự dòng
+      netPrice: netPrice,
+      position: row[0] || (i + 1)
     };
     
     // Thêm vào danh sách tất cả hóa đơn
     allInvoices.push(invoiceItem);
     
-    // Thêm vào map theo số hóa đơn (giờ mỗi key sẽ lưu một mảng các hóa đơn)
-    if (!result[normalizedInvoice]) {
-      result[normalizedInvoice] = [];
+    // Thêm vào map theo số hóa đơn
+    if (!result[invoiceNumber]) {
+      result[invoiceNumber] = [];
     }
-    result[normalizedInvoice].push(invoiceItem);
+    result[invoiceNumber].push(invoiceItem);
   }
   
   console.log(`Đã xử lý ${processedCount} dòng, có ${Object.keys(result).length} số hóa đơn duy nhất và ${allInvoices.length} hóa đơn tổng cộng`);
@@ -158,7 +175,7 @@ export const standardizeSeller = (sellerName: string | undefined): string => {
  */
 export const createInvoiceSignature = (invoice: InvoiceItem): string => {
   // Kết hợp tất cả thông tin của hóa đơn thành một chuỗi duy nhất
-  return `${invoice.invoiceOriginal}-${invoice.seller}-${invoice.position}`;
+  return `${invoice.invoiceOriginal}-${invoice.seller}`;
 };
 
 /**
@@ -205,6 +222,77 @@ export const findDuplicateInvoices = (
   });
   
   console.log(`Tổng cộng: ${duplicatedItems.length} hóa đơn trùng lặp hoàn toàn trong file ${isFile1 ? '1' : '2'}`);
+  
+  return duplicatedItems;
+};
+
+/**
+ * Tìm các hóa đơn trùng lặp giữa hai file với điều kiện đặc biệt
+ * Kiểm tra cùng invoiceOriginal và seller nhưng netPrice của một trong hai gấp đôi
+ * @param file1Invoices - Mảng hóa đơn từ file 1
+ * @param file2Invoices - Mảng hóa đơn từ file 2
+ * @returns Mảng các hóa đơn trùng lặp theo điều kiện đặc biệt
+ */
+export const findCrossFileDuplicates = (
+  file1Invoices: InvoiceItem[],
+  file2Invoices: InvoiceItem[]
+): DuplicatedItem[] => {
+  const duplicatedItems: DuplicatedItem[] = [];
+  
+  // Tạo map từ file 1 dựa trên invoiceOriginal + seller
+  const file1Map: Record<string, InvoiceItem[]> = {};
+  file1Invoices.forEach(invoice => {
+    const key = `${invoice.invoiceOriginal}-${invoice.seller}`;
+    if (!file1Map[key]) {
+      file1Map[key] = [];
+    }
+    file1Map[key].push(invoice);
+  });
+  
+  // Tạo map từ file 2 dựa trên invoiceOriginal + seller
+  const file2Map: Record<string, InvoiceItem[]> = {};
+  file2Invoices.forEach(invoice => {
+    const key = `${invoice.invoiceOriginal}-${invoice.seller}`;
+    if (!file2Map[key]) {
+      file2Map[key] = [];
+    }
+    file2Map[key].push(invoice);
+  });
+  
+  // Kiểm tra các key chung giữa hai file
+  const commonKeys = Object.keys(file1Map).filter(key => file2Map[key]);
+  
+  commonKeys.forEach(key => {
+    const file1Items = file1Map[key];
+    const file2Items = file2Map[key];
+    
+    // Kiểm tra từng cặp item từ file 1 và file 2
+    file1Items.forEach(item1 => {
+      file2Items.forEach(item2 => {
+        const netPrice1 = parseFloat(String(item1.netPrice || '0').replace(/[^0-9.-]/g, '')) || 0;
+        const netPrice2 = parseFloat(String(item2.netPrice || '0').replace(/[^0-9.-]/g, '')) || 0;
+        
+        // Kiểm tra điều kiện: một trong hai gấp đôi
+        const isDoublePrice = (netPrice1 > 0 && netPrice2 > 0) && 
+                             (Math.abs(netPrice1 - netPrice2 * 2) < 0.01 || 
+                              Math.abs(netPrice2 - netPrice1 * 2) < 0.01);
+        
+        if (isDoublePrice) {
+          duplicatedItems.push({
+            key: item1.invoiceOriginal,
+            file1: item1,
+            file2: item2,
+            isDuplicate: true
+          });
+          
+          console.log(`Tìm thấy hóa đơn trùng lặp với giá gấp đôi: ${item1.invoiceOriginal} - ${item1.seller}`);
+          console.log(`File 1 netPrice: ${netPrice1}, File 2 netPrice: ${netPrice2}`);
+        }
+      });
+    });
+  });
+  
+  console.log(`Tổng cộng: ${duplicatedItems.length} hóa đơn trùng lặp với giá gấp đôi giữa hai file`);
   
   return duplicatedItems;
 };
@@ -264,14 +352,18 @@ export const compareInvoiceData = (
   file1InvoiceCol: number,
   file1SellerCol: number,
   file1TaxCodeCol: number,
+  file1NetPriceCol: number,
   file2StartRow: number,
   file2InvoiceCol: number,
   file2SellerCol: number,
-  file2TaxCodeCol: number
+  file2TaxCodeCol: number,
+  file2NetPriceCol: number,
 ): ComparisonResult => {
   // Trích xuất dữ liệu từ cả hai file
-  const file1Result = extractInvoiceData(file1Data, file1StartRow, file1InvoiceCol, file1SellerCol, file1TaxCodeCol);
-  const file2Result = extractInvoiceData(file2Data, file2StartRow, file2InvoiceCol, file2SellerCol, file2TaxCodeCol);
+  const file1Result = extractInvoiceData(file1Data, file1StartRow, file1InvoiceCol, file1SellerCol, file1TaxCodeCol, file1NetPriceCol);
+  console.log(file1Result)
+  const file2Result = extractInvoiceData(file2Data, file2StartRow, file2InvoiceCol, file2SellerCol, file2TaxCodeCol, file2NetPriceCol);
+  console.log(file2Result)
   
   const file1Invoices = file1Result.invoiceMap;
   const file2Invoices = file2Result.invoiceMap;
@@ -337,8 +429,11 @@ export const compareInvoiceData = (
   const duplicatedInFile1 = findDuplicateInvoices(file1AllInvoices, true);
   const duplicatedInFile2 = findDuplicateInvoices(file2AllInvoices, false);
   
+  // Tìm các hóa đơn trùng lặp giữa hai file (điều kiện đặc biệt: gấp đôi giá)
+  const crossFileDuplicates = findCrossFileDuplicates(file1AllInvoices, file2AllInvoices);
+  
   // Kết hợp các hóa đơn trùng lặp
-  const duplicatedItems = [...duplicatedInFile1, ...duplicatedInFile2];
+  const duplicatedItems = [...duplicatedInFile1, ...duplicatedInFile2, ...crossFileDuplicates];
 
   return {
     missingInFile1,
@@ -362,6 +457,7 @@ export const validateInput = (
   invoiceRow: number,
   sellerCol: number,
   taxCodeCol: number,
+  netPriceCol: number,
   fileData: any[][]
 ): boolean => {
   // Kiểm tra dữ liệu đầu vào
@@ -371,7 +467,7 @@ export const validateInput = (
   }
   
   // Kiểm tra chỉ số cột và dòng
-  if (invoiceCol < 0 || sellerCol < 0 || taxCodeCol < 0 || invoiceRow < 0) {
+  if (invoiceCol < 0 || sellerCol < 0 || taxCodeCol < 0 || invoiceRow < 0 || netPriceCol < 0) {
     console.error('Chỉ số cột hoặc dòng không hợp lệ');
     return false;
   }

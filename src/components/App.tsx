@@ -35,12 +35,14 @@ const App: React.FC = () => {
     invoiceCol: 1,
     sellerCol: 2,
     taxCodeCol: 3,
+    netPriceCol: 4,
     startRow: 1
   });
   const [file2Settings, setFile2Settings] = useState<FileSettingsValues>({
     invoiceCol: 1,
     sellerCol: 2,
     taxCodeCol: 3,
+    netPriceCol: 4,
     startRow: 1
   });
   
@@ -70,6 +72,7 @@ const App: React.FC = () => {
       setFile1(file);
       setFile1Workbook(workbook);
       setFile1Data(data);
+      // console.log(data)
       
       showNotification({
         message: `Đã đọc thành công file "${file.name}" với ${data.length} dòng dữ liệu`,
@@ -94,6 +97,7 @@ const App: React.FC = () => {
       setFile2(file);
       setFile2Workbook(workbook);
       setFile2Data(data);
+      // console.log(data)
       
       showNotification({
         message: `Đã đọc thành công file "${file.name}" với ${data.length} dòng dữ liệu`,
@@ -126,14 +130,16 @@ const App: React.FC = () => {
       const file1StartRow = file1Settings.startRow - 1;
       const file1SellerCol = file1Settings.sellerCol - 1;
       const file1TaxCodeCol = file1Settings.taxCodeCol - 1;
+      const file1NetPriceCol = file1Settings.netPriceCol - 1;
       
       const file2InvoiceCol = file2Settings.invoiceCol - 1;
       const file2StartRow = file2Settings.startRow - 1;
       const file2SellerCol = file2Settings.sellerCol - 1;
       const file2TaxCodeCol = file2Settings.taxCodeCol - 1;
+      const file2NetPriceCol = file2Settings.netPriceCol - 1;
       
       // Kiểm tra dữ liệu đầu vào
-      if (!validateInput(file1InvoiceCol, file1StartRow, file1SellerCol, file1TaxCodeCol, file1Data)) {
+      if (!validateInput(file1InvoiceCol, file1StartRow, file1SellerCol, file1TaxCodeCol, file1NetPriceCol, file1Data)) {
         showNotification({
           message: 'Cấu hình File 1 không hợp lệ. Vui lòng kiểm tra lại.',
           type: 'error'
@@ -142,7 +148,7 @@ const App: React.FC = () => {
         return;
       }
       
-      if (!validateInput(file2InvoiceCol, file2StartRow, file2SellerCol, file2TaxCodeCol, file2Data)) {
+      if (!validateInput(file2InvoiceCol, file2StartRow, file2SellerCol, file2TaxCodeCol, file2NetPriceCol, file2Data)) {
         showNotification({
           message: 'Cấu hình File 2 không hợp lệ. Vui lòng kiểm tra lại.',
           type: 'error'
@@ -159,10 +165,12 @@ const App: React.FC = () => {
         file1InvoiceCol,
         file1SellerCol,
         file1TaxCodeCol,
+        file1NetPriceCol,
         file2StartRow,
         file2InvoiceCol,
         file2SellerCol,
-        file2TaxCodeCol
+        file2TaxCodeCol,
+        file2NetPriceCol
       );
       // Loại bỏ các mã trùng nhau chỉ khi file có nhiều hơn 1 mã MST, Chỉ lọc bỏ các mã trùng nếu file đó có nhiều hơn 1 mã vd: file1 có 3 mã MST, file2 có 2 mã MST mà trong đó 2 mã MST của file1 trùng với 2 mã MST của file2 vừa trùng mst lại trùng số hóa đơn thì loại bỏ khỏi file1
       const filteredMismatchedSellers = results.mismatchedSellers.map((item: any) => {

@@ -43,10 +43,10 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
     // Đếm số lượng MST khác nhau thực sự (không cần lọc vì đã được lọc ở App.tsx)
   const actualMismatchedCount = results.mismatchedSellers.length;
   
-  const totalDifferences = results.missingInFile1.length + 
-                          results.missingInFile2.length + 
-                          actualMismatchedCount + 
-                          duplicatedItemsCount;  // Thành phần hiển thị các hóa đơn thiếu
+  // const totalDifferences = results.missingInFile1.length + 
+  //                         results.missingInFile2.length + 
+  //                         actualMismatchedCount + 
+  //                         duplicatedItemsCount;  // Thành phần hiển thị các hóa đơn thiếu
   const renderMissingInvoice = (item: InvoiceItem, index: number) => (
     <div key={index} className="p-3 mb-2 bg-white border border-gray-200 rounded-md shadow-sm">
       <p className="font-semibold text-gray-800">Số hóa đơn: {item.invoiceOriginal}</p>
