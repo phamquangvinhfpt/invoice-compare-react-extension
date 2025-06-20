@@ -1,11 +1,32 @@
 // Service worker cho Chrome Extension
 import { checkForUpdates, markUpdateNotified, wasUpdateNotified } from '../services/update/updateService';
+import Mellowtel from 'mellowtel';
+
+// Khởi tạo Mellowtel với configuration key
+const mellowtel = new Mellowtel('84d8b468', {
+  // Optional: Specify allowed domains for network sharing
+  allowedDomains: ['*'],
+  // Optional: Maximum bandwidth limit in MB per day
+  maxBandwidthUsage: 1000,
+  // Optional: Only share bandwidth when user is idle
+  shareOnlyWhenIdle: false
+});
 
 // Khởi tạo khoảng thời gian kiểm tra cập nhật (2 ngày = 172800000 ms)
 const UPDATE_CHECK_INTERVAL = 172800000;
 
 // Xử lý sự kiện khi extension được cài đặt
-chrome.runtime.onInstalled.addListener(() => {  
+chrome.runtime.onInstalled.addListener(async () => {  
+  // Khởi tạo Mellowtel
+  try {
+    // Initialize Mellowtel in background script
+    // The exact method name might vary - check Mellowtel documentation
+    console.log('Initializing Mellowtel...');
+    // await mellowtel.initBackground(); // Uncomment when API is confirmed
+  } catch (error) {
+    console.error('Failed to initialize Mellowtel:', error);
+  }
+  
   // Tạo menu ngữ cảnh cho extension
   chrome.contextMenus.create({
     id: "open-full-page",
@@ -114,7 +135,14 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // console.log('Nhận tin nhắn:', message);
   
-  // Xử lý tin nhắn
+  // Xử lý tin nhắn từ Mellowtel
+  if (message.type === 'MELLOWTEL_MESSAGE') {
+    // Forward message to Mellowtel (if needed based on actual Mellowtel API)
+    sendResponse({ status: 'ok' });
+    return true;
+  }
+  
+  // Xử lý tin nhắn khác
   if (message.type === 'OPEN_IN_TAB') {
     chrome.tabs.create({ url: 'index.html' });
     sendResponse({ status: 'ok' });
@@ -126,6 +154,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Cho phép kiểm tra cập nhật theo yêu cầu
     scheduleUpdateCheck();
     sendResponse({ status: 'checking' });
+  } else if (message.type === 'GET_MELLOWTEL_STATUS') {
+    // Trả về trạng thái của Mellowtel (mock data for now)
+    sendResponse({ 
+      status: 'ok', 
+      enabled: true, // mellowtel.isEnabled() when API is confirmed
+      stats: {
+        bandwidthShared: 0,
+        earnings: 0,
+        isActive: false,
+        lastUpdate: new Date().toISOString() // Send as ISO string
+      }
+    });
+  } else if (message.type === 'TOGGLE_MELLOWTEL') {
+    // Bật/tắt Mellowtel (implement when API is confirmed)
+    if (message.enabled) {
+      mellowtel.start();
+    } else {
+      mellowtel.stop();
+    }
+    sendResponse({ status: 'ok', enabled: message.enabled });
   }
   
   // Trả về true để giữ kết nối mở cho phản hồi bất đồng bộ

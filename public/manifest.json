@@ -16,7 +16,17 @@
     "storage",
     "contextMenus",
     "notifications",
-    "alarms"
+    "alarms",
+    "activeTab",
+    "background"
+  ],
+  "optional_permissions": [
+    "proxy",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
   ],
   "background": {
     "service_worker": "background.js"
