@@ -18,19 +18,27 @@
     "notifications",
     "alarms",
     "activeTab",
-    "background"
+    "background",
+    "declarativeNetRequest"
   ],
   "optional_permissions": [
     "proxy",
     "webRequest"
   ],
   "host_permissions": [
-    "http://*/*",
-    "https://*/*"
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"
   },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content_mellowtel.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
   "icons": {
     "16": "images/excel.webp",
     "48": "images/excel.webp",

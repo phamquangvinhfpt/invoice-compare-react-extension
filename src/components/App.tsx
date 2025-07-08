@@ -52,6 +52,9 @@ const App: React.FC = () => {
   const [isComparing, setIsComparing] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
+  // State cho tùy chọn so sánh netPrice
+  const [enableNetPriceComparison, setEnableNetPriceComparison] = useState(true);
+
   // State cho Mellowtel
   const [showMellowtelSettings, setShowMellowtelSettings] = useState(false);
 
@@ -61,6 +64,16 @@ const App: React.FC = () => {
   useEffect(() => {
     // Kiểm tra xem đang ở trong popup hay tab đầy đủ
     setIsFullPage(window.location.pathname.includes('index.html'));
+
+    // Kiểm tra nếu là first install và chưa opt-in thì tự động hiện Mellowtel settings
+    chrome.runtime.sendMessage({ type: 'CHECK_MELLOWTEL_OPTIN' }, (response) => {
+      if (response && response.firstInstall && !response.hasOptedIn) {
+        // Delay một chút để UI load xong
+        setTimeout(() => {
+          setShowMellowtelSettings(true);
+        }, 1000);
+      }
+    });
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey && event.key === 'b') {
@@ -187,7 +200,8 @@ const App: React.FC = () => {
         file2InvoiceCol,
         file2SellerCol,
         file2TaxCodeCol,
-        file2NetPriceCol
+        file2NetPriceCol,
+        enableNetPriceComparison
       );
       // Loại bỏ các mã trùng nhau chỉ khi file có nhiều hơn 1 mã MST, Chỉ lọc bỏ các mã trùng nếu file đó có nhiều hơn 1 mã vd: file1 có 3 mã MST, file2 có 2 mã MST mà trong đó 2 mã MST của file1 trùng với 2 mã MST của file2 vừa trùng mst lại trùng số hóa đơn thì loại bỏ khỏi file1
       const filteredMismatchedSellers = results.mismatchedSellers.map((item: any) => {
@@ -365,16 +379,16 @@ const App: React.FC = () => {
               <h1 className="text-2xl font-bold text-white text-center">So Sánh Hóa Đơn Excel</h1>
               <p className="text-blue-100 text-sm text-center mt-2">Công cụ so sánh số hóa đơn và thông tin người bán</p>
             </div>
-            {/* <button
+            <button
               onClick={() => setShowMellowtelSettings(true)}
               className="text-white hover:text-gray-200 p-2 rounded-md hover:bg-white hover:bg-opacity-10 transition-colors ml-4"
-              title="Mellowtel Settings"
+              title="Mellowtel Bandwidth Sharing Settings"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-            </button> */}
+            </button>
           </div>
           {!isFullPage && (
             <div className="flex justify-end mt-1">
@@ -416,6 +430,26 @@ const App: React.FC = () => {
             settings={file2Settings}
             onSettingsChange={setFile2Settings}
           />
+        </div>
+
+        {/* NetPrice Comparison Option */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-center">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={enableNetPriceComparison}
+                onChange={(e) => setEnableNetPriceComparison(e.target.checked)}
+                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Bật so sánh doanh số chưa thuế (tìm hóa đơn có giá gấp đôi)
+              </span>
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 text-center mt-2">
+            Khi bật, hệ thống sẽ tìm các hóa đơn có cùng số và người bán nhưng doanh số chưa thuế của một bên gấp đôi bên kia
+          </p>
         </div>
 
         {/* Compare Button */}

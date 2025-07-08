@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-  getMellowtelStatus,
-  toggleMellowtel,
-  saveMellowtelConfig,
-  loadMellowtelConfig,
-  MellowtelConfig,
-  MellowtelStats
+  openMellowtelSettings,
+  checkMellowtelOptInStatus
 } from '../services/mellowtelService';
 
 interface MellowtelSettingsProps {
@@ -13,215 +9,234 @@ interface MellowtelSettingsProps {
   onClose: () => void;
 }
 
-const MellowtelSettings: React.FC<MellowtelSettingsProps> = ({ isOpen, onClose }) => {
-  const [config, setConfig] = useState<MellowtelConfig>({
-    enabled: true,
-    allowedDomains: ['*'],
-    maxBandwidthUsage: 1000,
-    shareOnlyWhenIdle: false
-  });
-  const [stats, setStats] = useState<MellowtelStats | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+// Component hiển thị thông báo chào mừng khi cài đặt lần đầu
+const WelcomeInstallBanner: React.FC<{ onOpenSettings: () => void }> = ({ onOpenSettings }) => {
+  return (
+    <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-6 mb-6">
+      <div className="flex items-start">
+        <div className="flex-shrink-0">
+          <svg className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div className="ml-4 flex-1">
+          <h3 className="text-lg font-medium text-blue-900 mb-2">
+            🎉 Welcome to Invoice Compare + Mellowtel!
+          </h3>
+          <p className="text-sm text-blue-800 mb-4">
+            Thank you for installing our extension! You can now set up Mellowtel to support the development and earn money through bandwidth sharing.
+          </p>
 
+          <div className="bg-white border border-blue-200 rounded-lg p-4 mb-4">
+            <h4 className="font-medium text-blue-900 mb-2">📋 What is Mellowtel?</h4>
+            <ul className="text-sm text-blue-800 space-y-2">
+              <li className="flex items-center">
+                <span className="bg-blue-100 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium mr-2">💰</span>
+                Earn money by sharing unused internet bandwidth
+              </li>
+              <li className="flex items-center">
+                <span className="bg-blue-100 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium mr-2">🔒</span>
+                100% transparent and privacy-focused
+              </li>
+              <li className="flex items-center">
+                <span className="bg-blue-100 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium mr-2">⚡</span>
+                Support extension development automatically
+              </li>
+            </ul>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
+            <div className="flex items-start">
+              <svg className="h-4 w-4 text-yellow-400 mt-0.5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <p className="text-xs text-yellow-800">
+                  <strong>Opt-in Only:</strong> Mellowtel is completely optional. You can enable or disable it at any time through the settings page.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex space-x-3">
+            <button
+              onClick={onOpenSettings}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center"
+            >
+              <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              </svg>
+              Open Mellowtel Settings
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Main component
+const MellowtelSettings: React.FC<MellowtelSettingsProps> = ({ isOpen, onClose }) => {
+  const [loading, setLoading] = useState(false);
+  const [isFirstInstall, setIsFirstInstall] = useState(false);
+  const [hasOptedIn, setHasOptedIn] = useState(false);
+
+  // Load initial data
   useEffect(() => {
     if (isOpen) {
-      loadSettings();
+      loadData();
     }
   }, [isOpen]);
 
-  const loadSettings = async () => {
+  const loadData = async () => {
     setLoading(true);
-    setError(null);
     try {
-      const [configData, statusData] = await Promise.all([
-        loadMellowtelConfig(),
-        getMellowtelStatus()
-      ]);
-      setConfig(configData);
-      setStats(statusData.stats);
-    } catch (err) {
-      setError('Failed to load Mellowtel settings');
-      console.error('Error loading Mellowtel settings:', err);
+      // Check opt-in status
+      const optInData = await checkMellowtelOptInStatus();
+      setHasOptedIn(optInData.hasOptedIn);
+      setIsFirstInstall(optInData.firstInstall);
+    } catch (error) {
+      console.error('Error loading Mellowtel data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleToggle = async () => {
-    setLoading(true);
+  const handleOpenSettings = async () => {
     try {
-      const newEnabled = !config.enabled;
-      await toggleMellowtel(newEnabled);
-      const newConfig = { ...config, enabled: newEnabled };
-      setConfig(newConfig);
-      await saveMellowtelConfig(newConfig);
-    } catch (err) {
-      setError('Failed to toggle Mellowtel');
-      console.error('Error toggling Mellowtel:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleConfigChange = (key: keyof MellowtelConfig, value: any) => {
-    setConfig(prev => ({ ...prev, [key]: value }));
-  };
-
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      await saveMellowtelConfig(config);
-      // Apply the new configuration
-      if (config.enabled) {
-        await toggleMellowtel(false);
-        await toggleMellowtel(true);
+      setLoading(true);
+      const result = await openMellowtelSettings();
+      if (result.success) {
+        console.log('Mellowtel settings opened successfully');
+      } else {
+        console.error('Failed to open Mellowtel settings:', result.error);
       }
-    } catch (err) {
-      setError('Failed to save Mellowtel settings');
-      console.error('Error saving Mellowtel settings:', err);
+    } catch (error) {
+      console.error('Error opening Mellowtel settings:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isOpen) return null; return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-800">Mellowtel Settings</h2>
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center p-6 border-b">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Mellowtel Settings</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Manage your bandwidth sharing preferences and earnings
+            </p>
+          </div>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
           >
-            ✕
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
-          </div>
-        )}
+        {/* Content */}
+        <div className="p-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-3 text-gray-600">Loading...</span>
+            </div>
+          ) : (
+            <>
+              {/* Welcome Banner for first install */}
+              {isFirstInstall && (
+                <WelcomeInstallBanner onOpenSettings={handleOpenSettings} />
+              )}
 
-        {loading ? (
-          <div className="text-center py-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Loading...</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Enable/Disable Toggle */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">
-                Enable Bandwidth Sharing
-              </span>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={config.enabled}
-                  onChange={handleToggle}
-                  className="sr-only"
-                />
-                <div className={`w-11 h-6 rounded-full ${config.enabled ? 'bg-blue-600' : 'bg-gray-200'
-                  } relative transition-colors duration-200 ease-in-out`}>
-                  <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 ease-in-out ${config.enabled ? 'transform translate-x-5' : ''
-                    }`}></div>
+              {/* Main Settings Section */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Mellowtel Bandwidth Sharing
+                </h3>
+
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Mellowtel allows you to earn money by sharing a small portion of your unused internet bandwidth.
+                    All settings are managed through the official Mellowtel settings page.
+                  </p>
+
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-medium text-gray-900 mb-2">📊 Features</h4>
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      <li>• Completely transparent and open source</li>
+                      <li>• Privacy-focused - no personal data collection</li>
+                      <li>• Easy opt-in/opt-out at any time</li>
+                      <li>• Earn money while using your favorite extensions</li>
+                    </ul>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        Manage Settings
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Open the official Mellowtel settings page to configure your preferences
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleOpenSettings}
+                      disabled={loading}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center"
+                    >
+                      {loading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Opening...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                          </svg>
+                          Open Settings
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </label>
-            </div>
+              </div>
 
-            {/* Max Bandwidth Usage */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Max Bandwidth Usage (MB/day)
-              </label>
-              <input
-                type="number"
-                min="10"
-                max="1000"
-                value={config.maxBandwidthUsage}
-                onChange={(e) => handleConfigChange('maxBandwidthUsage', parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* Share Only When Idle */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">
-                Share only when idle
-              </span>
-              <input
-                type="checkbox"
-                checked={config.shareOnlyWhenIdle}
-                onChange={(e) => handleConfigChange('shareOnlyWhenIdle', e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-            </div>
-
-            {/* Stats Display */}
-            {stats && (
-              <div className="border-t pt-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Statistics</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+              {/* Information Section */}
+              <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <svg className="h-5 w-5 text-blue-400 mt-0.5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                   <div>
-                    <span className="text-gray-600">Bandwidth Shared:</span>
-                    <p className="font-medium">{stats.bandwidthShared} MB</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Earnings:</span>
-                    <p className="font-medium">${stats.earnings.toFixed(4)}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Status:</span>
-                    <p className={`font-medium ${stats.isActive ? 'text-green-600' : 'text-gray-600'}`}>
-                      {stats.isActive ? 'Active' : 'Inactive'}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Last Update:</span>
-                    <p className="font-medium">
-                      {(() => {
-                        try {
-                          return new Date(stats.lastUpdate).toLocaleDateString();
-                        } catch (error) {
-                          return 'N/A';
-                        }
-                      })()}
+                    <h4 className="text-sm font-medium text-blue-900">About Mellowtel</h4>
+                    <p className="text-sm text-blue-800 mt-1">
+                      Mellowtel is an open-source, privacy-focused platform that allows extension users to support developers
+                      by sharing unused bandwidth. Visit the settings page to learn more and configure your preferences.
                     </p>
                   </div>
                 </div>
               </div>
-            )}
+            </>
+          )}
+        </div>
 
-            {/* Action Buttons */}
-            <div className="flex space-x-3 pt-4">
-              <button
-                onClick={handleSave}
-                disabled={loading}
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                Save Settings
-              </button>
-              <button
-                onClick={onClose}
-                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-            </div>
-
-            {/* Info */}
-            <div className="text-xs text-gray-500 mt-4">
-              <p className="mb-1">
-                💡 Mellowtel allows you to earn passive income by sharing unused bandwidth.
-              </p>
-              <p>
-                Your privacy and security are protected. Only anonymous traffic is routed through your connection.
-              </p>
-            </div>
-          </div>
-        )}
+        {/* Footer */}
+        <div className="flex justify-end space-x-3 p-6 border-t bg-gray-50">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );

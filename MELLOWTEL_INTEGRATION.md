@@ -6,34 +6,98 @@ This guide explains how to complete the Mellowtel integration in your Invoice Co
 
 Mellowtel is a service that allows your Chrome extension users to earn passive income by sharing their unused bandwidth. It's privacy-focused and only routes anonymous traffic through users' connections.
 
+# Mellowtel Integration Guide
+
+## ⚠️ QUAN TRỌNG: Opt-in Process
+
+**Câu trả lời cho câu hỏi của bạn:** Không có `generateAndOpenOptInLink` thì **request KHÔNG được tính** và **không có earnings**!
+
+### Tại sao Opt-in bắt buộc:
+
+1. **🚨 Mellowtel Terms of Service** yêu cầu explicit user consent
+2. **💰 Requests không được tính** nếu user chưa properly opt-in
+3. **⛔ Extension có thể bị ban** khỏi Mellowtel program
+4. **🔒 Tuân thủ privacy regulations** (GDPR, CCPA, etc.)
+
+### Đã tích hợp Opt-in Process:
+
+✅ **Đã hoàn thành:**
+- Opt-in link generation
+- Opt-in status checking  
+- UI warnings khi chưa opt-in
+- Visual indicators cho opt-in status
+
 ## Integration Status
 
-✅ **Completed:**
+✅ **Hoàn toàn tích hợp:**
 - Mellowtel package installed (`mellowtel: ^1.6.2`)
-- Background script integration added
+- Background script integration
 - Manifest permissions updated
-- MellowtelSettings component created
-- UI integration in main app
-- Service layer created for communication
+- **Opt-in process implemented** 🔥
+- MellowtelSettings component với opt-in UI
+- Service layer cho communication
 - Build compiles successfully
+- Error handling cho date formatting
 
-⚠️  **Requires Action:**
+⚠️  **Cần thực hiện:**
 
 1. **Get Configuration Key:**
-   - Visit [https://mellowtel.it](https://mellowtel.it)
-   - Create an account and register your extension
-   - Get your configuration key
-   - Replace `YOUR_CONFIGURATION_KEY_HERE` in `/src/background/index.ts` (line 7)
+   - Truy cập [https://mellowtel.it](https://mellowtel.it)
+   - Tạo account và đăng ký extension
+   - Lấy configuration key
+   - Thay thế `YOUR_CONFIGURATION_KEY_HERE` trong `/src/background/index.ts` (dòng 7)
 
 2. **Update Mellowtel API Calls:**
-   - The current integration uses placeholder/mock methods
-   - Once you have the configuration key, uncomment and update the actual API calls
-   - Check Mellowtel documentation for correct method names
+   - Integration hiện tại dùng placeholder methods
+   - Khi có configuration key, uncomment và update actual API calls
+   - Check Mellowtel docs cho correct method names
 
-3. **Test the Integration:**
-   - Build and test the extension
-   - Verify settings modal opens correctly
-   - Test enabling/disabling Mellowtel
+## User Experience Flow
+
+### **1. Trước khi Opt-in:**
+- ⚠️ **Warning banner** trong settings
+- 🚫 Bandwidth sharing bị disable
+- 💡 Clear instructions để complete opt-in
+
+### **2. Opt-in Process:**
+- 🔗 Click "Complete Opt-in Process" button
+- 🌐 Tự động mở Mellowtel opt-in page
+- ✅ Sau khi opt-in, status tự động update
+
+### **3. Sau khi Opt-in:**
+- ✅ **Green banner** confirming opt-in
+- 🎛️ Full access to bandwidth sharing controls
+- 📊 Valid requests và earnings tracking
+
+## Technical Implementation
+
+### **Opt-in Functions Added:**
+
+```typescript
+// Generate opt-in link
+generateMellowtelOptInLink(): Promise<{success: boolean, url?: string}>
+
+// Check opt-in status  
+checkMellowtelOptInStatus(): Promise<{hasOptedIn: boolean}>
+```
+
+### **UI Components:**
+
+1. **Warning Banner** (chưa opt-in):
+   - Orange warning với clear message
+   - "Complete Opt-in Process" button
+   - Icon và styling phù hợp
+
+2. **Success Banner** (đã opt-in):
+   - Green success indicator
+   - Confirmation message
+   - Checkmark icon
+
+### **Background Script Updates:**
+
+- `GENERATE_MELLOWTEL_OPTIN` message handler
+- `CHECK_MELLOWTEL_OPTIN` message handler
+- Automatic tab opening cho opt-in process
 
 ## Files Modified
 
